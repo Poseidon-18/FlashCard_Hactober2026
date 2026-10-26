@@ -29,10 +29,11 @@ Anki & JSON Export: Export study packs directly into Anki-ready CSV format or cl
 * Storage & Exports:** Browser LocalStorage, Blob CSV/JSON Downloaders
 
 ## Setup & Installation:
- I) Prerequisites
+ ## I) Prerequisites
  *Any modern Web Browser (Chrome, Firefox, Edge, Safari).
  *A Google Gemini API Key (with access to gemma-4-26b-a4b-it or Gemini models).
- II) Installation Steps
+
+ ##II) Installation Steps
   1)Clone the Repository:
   git clone https://github.com/your-username/FlashCard_Hactober2026.git
   cd FlashCard_Hactober2026
