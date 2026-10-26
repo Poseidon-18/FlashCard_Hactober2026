@@ -3,24 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F&Q: Flashcard & Quiz Generator (Afterparty Edition)</title>
+    <title>F&Q: Flashcard & Quiz Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        ap: {
-                            bg: '#FFF3EE',      /* Warm editorial peach background */
-                            card: '#FFFFFF',    /* Crisp white containers */
-                            pink: '#FF70A6',    /* Vibrant Afterparty pink */
-                            orange: '#FF9770',  /* Warm tangerine */
-                            yellow: '#FFD670',  /* Sunny yellow */
-                            mint: '#70D6FF',    /* Playful mint blue */
-                            purple: '#E7C6FF',  /* Soft lavender */
-                            text: '#1E1E24',    /* Deep charcoal text */
-                            muted: '#6B7280',   /* Muted gray */
-                            border: '#1E1E24'   /* Brutalist solid border */
+                        party: {
+                            bg: '#FFF8F5',
+                            card: '#FFFFFF',
+                            raised: '#FFF0EC',
+                            line: '#1E1E1E',
+                            text: '#111111',
+                            muted: '#666666',
+                            pink: '#FF70A6',
+                            orange: '#FF9770',
+                            mint: '#70D6FF',
+                            yellow: '#FFD670',
+                            purple: '#9D4EDD',
+                            rose: '#FF5757',
+                            on: '#111111'
                         }
                     },
                     fontFamily: {
@@ -38,60 +41,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
-    <!-- Optional local config.js -->
     <script src="config.js" onerror="console.warn('config.js not found (optional).')"></script>
 
     <style>
         html { scroll-behavior: smooth; }
         body {
-            background-color: #FFF3EE;
+            background-color: #FFF8F5;
             background-image: 
-                radial-gradient(circle at 10% 10%, rgba(255, 112, 166, 0.12), transparent 40%),
-                radial-gradient(circle at 90% 90%, rgba(112, 214, 255, 0.15), transparent 40%);
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+                linear-gradient(to right, rgba(30,30,30,0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30,30,30,0.04) 1px, transparent 1px);
+            background-size: 24px 24px;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #1E1E24;
+            color: #111111;
             overflow-x: hidden;
         }
 
-        /* Brutalist hard shadows and borders */
-        .brut-box {
-            background: #FFFFFF;
-            border: 3px solid #1E1E24;
-            box-shadow: 4px 4px 0px #1E1E24;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        .brutal-border {
+            border: 3px solid #111111;
+            box-shadow: 4px 4px 0px #111111;
         }
-        .brut-box-sm {
-            background: #FFFFFF;
-            border: 2px solid #1E1E24;
-            box-shadow: 3px 3px 0px #1E1E24;
+        .brutal-border-sm {
+            border: 2px solid #111111;
+            box-shadow: 3px 3px 0px #111111;
         }
-        .brut-btn {
-            border: 3px solid #1E1E24;
-            box-shadow: 3px 3px 0px #1E1E24;
-            transition: all 0.1s ease;
-            font-weight: 700;
+        .brutal-btn {
+            border: 3px solid #111111;
+            box-shadow: 4px 4px 0px #111111;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
         }
-        .brut-btn:hover {
-            transform: translate(-1px, -1px);
-            box-shadow: 4px 4px 0px #1E1E24;
+        .brutal-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #111111;
         }
-        .brut-btn:active {
+        .brutal-btn:active {
             transform: translate(2px, 2px);
-            box-shadow: 1px 1px 0px #1E1E24;
+            box-shadow: 2px 2px 0px #111111;
         }
 
         .input-field {
             background: #FFFFFF;
-            border: 2px solid #1E1E24;
-            box-shadow: 2px 2px 0px #1E1E24;
+            border: 3px solid #111111;
+            box-shadow: 3px 3px 0px #111111;
             transition: all 0.2s ease;
         }
         .input-field:focus-within, .input-field:focus {
             outline: none;
-            box-shadow: 3px 3px 0px #FF70A6;
-            border-color: #FF70A6;
+            box-shadow: 4px 4px 0px #FF70A6;
+            border-color: #111111;
         }
 
         /* 3D flashcard flip */
@@ -101,206 +97,188 @@
         .rotate-y-180 { transform: rotateY(180deg); }
 
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #FFF3EE; border-left: 2px solid #1E1E24; }
-        ::-webkit-scrollbar-thumb { background: #1E1E24; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #FFF8F5; border-left: 2px solid #111111; }
+        ::-webkit-scrollbar-thumb { background: #111111; border-radius: 4px; }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col selection:bg-ap-pink selection:text-white">
+<body class="min-h-screen flex flex-col selection:bg-party-pink selection:text-party-on">
 
     <!-- Top Navigation -->
-    <header class="sticky top-0 z-40 bg-ap-bg/95 backdrop-blur-md border-b-3 border-ap-border px-6 py-4 flex justify-between items-center shadow-sm">
-        <div class="flex items-center space-x-3">
-            <h1 class="font-extrabold text-xl tracking-tight flex items-center space-x-2">
-                <span class="bg-ap-pink text-white px-2.5 py-1 rounded-lg border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24]">F&Q</span>
-                <span class="text-ap-text font-black">Generator</span>
+    <header class="sticky top-0 z-40 bg-party-bg/95 backdrop-blur-md border-b-4 border-party-line px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <h1 class="font-extrabold text-lg tracking-tight flex items-center space-x-2">
+                <span class="bg-party-pink px-2.5 py-1 brutal-border-sm rotate-[-2deg] inline-block font-mono">F&Q</span>
+                <span>Generator</span>
             </h1>
-            <button onclick="openAboutModal()" class="hidden sm:flex items-center space-x-1.5 text-xs font-bold bg-ap-yellow px-3 py-1.5 rounded-lg border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24] hover:bg-yellow-300 transition">
-                <i class="fa-solid fa-sparkles"></i>
+            <button onclick="openAboutModal()" class="text-xs font-bold text-party-text bg-party-yellow px-3.5 py-1.5 brutal-btn rounded-xl transition flex items-center space-x-1.5">
                 <span>About</span>
             </button>
         </div>
 
-        <div class="flex items-center space-x-2.5">
-            <button onclick="openPacksModal()" class="bg-ap-mint text-ap-text px-3 py-2 rounded-xl text-xs font-bold brut-btn flex items-center space-x-1.5">
+        <div class="flex items-center space-x-3">
+            <button onclick="openPacksModal()" class="bg-party-mint hover:bg-party-mint/90 text-party-on px-4 py-2 rounded-xl text-xs font-extrabold brutal-btn transition flex items-center space-x-2">
                 <i class="fa-solid fa-folder-open"></i>
-                <span class="hidden md:inline">My Packs</span>
+                <span class="hidden sm:inline">My Packs</span>
             </button>
-            <button onclick="openSettingsModal()" class="bg-ap-orange text-ap-text px-3 py-2 rounded-xl text-xs font-bold brut-btn flex items-center space-x-1.5">
-                <i class="fa-solid fa-key"></i>
-                <span class="hidden md:inline">API Key</span>
-            </button>
-            <button onclick="openExportModal()" class="bg-ap-pink text-white px-3 py-2 rounded-xl text-xs font-bold brut-btn flex items-center space-x-1.5">
+            <button onclick="openExportModal()" class="bg-party-pink hover:bg-party-pink/90 text-party-on px-4 py-2 rounded-xl text-xs font-extrabold brutal-btn transition flex items-center space-x-2">
                 <i class="fa-solid fa-download"></i>
-                <span class="hidden md:inline">Export</span>
+                <span class="hidden sm:inline">Export</span>
             </button>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="max-w-6xl w-full mx-auto px-6 py-12 md:py-20 text-center flex flex-col items-center justify-center">
-        <div class="brut-box rounded-3xl p-8 md:p-12 max-w-3xl mx-auto space-y-6 relative overflow-hidden bg-white">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-ap-yellow rounded-full border-3 border-ap-border opacity-70 pointer-events-none"></div>
-            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-ap-mint rounded-full border-3 border-ap-border opacity-70 pointer-events-none"></div>
-            
-            <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-ap-yellow border-2 border-ap-border font-bold text-xs shadow-[2px_2px_0px_#1E1E24] uppercase tracking-wider">
-                <i class="fa-solid fa-bolt text-amber-600"></i>
-                <span>Afterparty Edition • Gemma 4 & Gemini</span>
-            </div>
-
-            <h2 class="text-3xl md:text-5xl font-black tracking-tight leading-tight text-ap-text">
-                Turn Notes Into <span class="bg-ap-pink text-white px-2 py-0.5 rounded-lg border-2 border-ap-border inline-block rotate-1">Flashcards</span> & <span class="bg-ap-mint text-ap-text px-2 py-0.5 rounded-lg border-2 border-ap-border inline-block -rotate-1">Quizzes</span> Instantly
+    <section id="hero" class="relative max-w-7xl w-full mx-auto px-6 pt-12 pb-8 flex flex-col items-center justify-center text-center">
+        <div class="bg-party-card brutal-border rounded-3xl p-8 md:p-12 max-w-4xl mx-auto space-y-6 relative overflow-hidden">
+            <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                Turn Notes Into <span class="bg-party-pink px-2 py-0.5 brutal-border-sm inline-block rotate-1">Flashcards</span> & <span class="bg-party-mint px-2 py-0.5 brutal-border-sm inline-block -rotate-1">Quizzes</span> Instantly
             </h2>
-            <p class="text-sm md:text-base text-ap-muted max-w-xl mx-auto font-medium">
+            <p class="text-sm md:text-base text-party-muted max-w-2xl mx-auto font-medium leading-relaxed">
                 Drop your lecture notes or PDF below to generate high-retention active recall flashcards and interactive practice tests with instant AI scoring.
             </p>
             <div class="pt-2">
-                <button onclick="document.getElementById('workspace').scrollIntoView({behavior:'smooth'})" class="brut-btn bg-ap-orange text-ap-text text-sm md:text-base px-8 py-3.5 rounded-2xl shadow-[4px_4px_0px_#1E1E24] hover:bg-orange-400">
-                    Let's Study <i class="fa-solid fa-arrow-down ml-2"></i>
+                <button onclick="document.getElementById('workspace').scrollIntoView({behavior:'smooth'})" class="bg-party-orange hover:bg-party-orange/90 text-party-on font-extrabold px-8 py-3.5 rounded-2xl brutal-btn text-sm inline-flex items-center space-x-2">
+                    <span>Let's Study</span>
+                    <i class="fa-solid fa-arrow-down"></i>
                 </button>
             </div>
         </div>
     </section>
 
     <!-- Workspace -->
-    <main id="workspace" class="max-w-6xl w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pb-24 scroll-mt-24">
+    <main id="workspace" class="relative flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pb-24 scroll-mt-20">
 
-        <!-- Left Column: Notes & Inputs -->
+        <!-- Left: Notes Input -->
         <div class="lg:col-span-5 space-y-6">
-            <div class="brut-box rounded-3xl p-6 space-y-5 bg-white">
-                <div class="flex items-center justify-between border-b-2 border-ap-border pb-3">
-                    <h3 class="font-black text-sm uppercase tracking-wider flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full bg-ap-pink border-2 border-ap-border inline-block"></span>
+            <div class="bg-party-card brutal-border rounded-3xl p-6 space-y-5">
+                <div class="flex items-center justify-between border-b-2 border-party-line pb-3">
+                    <h2 class="font-extrabold text-xs uppercase tracking-wider flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-party-pink inline-block brutal-border-sm"></span>
                         <span>1. Enter Your Notes</span>
-                    </h3>
-                    <span id="fileBadge" class="hidden text-[10px] px-2 py-0.5 rounded-lg bg-ap-mint border-2 border-ap-border font-bold">PDF Ready</span>
+                    </h2>
+                    <span id="fileBadge" class="hidden text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-party-mint brutal-border-sm">PDF Extracted</span>
                 </div>
 
-                <!-- Dropzone -->
-                <div id="dropzone" class="border-3 border-dashed border-ap-border hover:border-ap-pink rounded-2xl p-6 text-center cursor-pointer transition-all bg-ap-bg/50 hover:bg-ap-pink/5 group">
+                <div id="dropzone" class="border-3 border-dashed border-party-line hover:border-party-pink rounded-2xl p-6 text-center cursor-pointer transition-all bg-party-raised hover:bg-party-pink/10 group">
                     <input type="file" id="fileInput" accept=".pdf,.txt" class="hidden" onchange="handleFileSelect(event)">
-                    <div class="w-12 h-12 mx-auto rounded-xl bg-ap-yellow border-2 border-ap-border flex items-center justify-center group-hover:scale-110 transition-transform mb-3 shadow-[2px_2px_0px_#1E1E24]">
-                        <i class="fa-solid fa-cloud-arrow-up text-lg text-ap-text"></i>
+                    <div class="w-12 h-12 mx-auto rounded-2xl bg-party-yellow brutal-border-sm flex items-center justify-center group-hover:scale-105 transition-transform mb-3">
+                        <i class="fa-solid fa-cloud-arrow-up text-lg text-party-on"></i>
                     </div>
-                    <p class="text-sm font-black text-ap-text">Drop PDF or text notes here</p>
-                    <p class="text-xs text-ap-muted mt-1">Automatic browser extraction via PDF.js</p>
+                    <p class="text-xs font-extrabold">Drop PDF or text notes here</p>
+                    <p class="text-[11px] text-party-muted mt-1 font-medium">Automatic browser extraction via PDF.js</p>
                 </div>
 
-                <!-- Textarea -->
                 <div class="space-y-1.5">
-                    <label class="text-xs font-bold text-ap-text flex justify-between">
+                    <label class="text-xs font-bold flex justify-between items-center">
                         <span>Or Paste Notes Directly</span>
-                        <span id="charCounter" class="text-[10px] font-mono text-ap-muted">0 chars</span>
+                        <span id="charCounter" class="text-[10px] font-mono bg-party-yellow px-2 py-0.5 brutal-border-sm font-extrabold">0 chars</span>
                     </label>
-                    <textarea id="notesInput" rows="7" placeholder="Paste chapter summaries, lecture slides, or key concepts..."
-                        class="w-full input-field rounded-2xl p-3.5 text-xs font-medium text-ap-text placeholder-ap-muted resize-none"
+                    <textarea id="notesInput" rows="7" placeholder="Paste chapter summaries, lecture notes, or key concepts..."
+                        class="w-full input-field rounded-2xl p-4 text-xs placeholder-party-muted/70 resize-none font-medium"
                         oninput="document.getElementById('charCounter').innerText = this.value.length + ' chars'"></textarea>
                 </div>
 
-                <!-- Counts -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="input-field p-3 rounded-2xl bg-white">
-                        <label class="block text-[11px] font-bold text-ap-muted mb-1">Flashcards Count</label>
-                        <input type="number" id="numCards" value="6" min="2" max="15" class="bg-transparent w-full text-sm font-mono font-black text-ap-text focus:outline-none">
+                <div class="grid grid-cols-2 gap-4 pt-1">
+                    <div class="input-field p-3.5 rounded-2xl">
+                        <label class="block text-[11px] font-extrabold mb-1">Flashcards Count</label>
+                        <input type="number" id="numCards" value="6" min="2" max="15" class="bg-transparent w-full text-base font-mono font-bold text-party-on focus:outline-none">
                     </div>
-                    <div class="input-field p-3 rounded-2xl bg-white">
-                        <label class="block text-[11px] font-bold text-ap-muted mb-1">Quiz Items Count</label>
-                        <input type="number" id="numQuiz" value="5" min="2" max="15" class="bg-transparent w-full text-sm font-mono font-black text-ap-text focus:outline-none">
+                    <div class="input-field p-3.5 rounded-2xl">
+                        <label class="block text-[11px] font-extrabold mb-1">Quiz Items Count</label>
+                        <input type="number" id="numQuiz" value="5" min="2" max="15" class="bg-transparent w-full text-base font-mono font-bold text-party-on focus:outline-none">
                     </div>
                 </div>
 
-                <button onclick="generateStudyMaterial()" id="generateBtn" class="w-full brut-btn bg-ap-pink text-white py-4 rounded-2xl text-sm md:text-base font-black shadow-[4px_4px_0px_#1E1E24] hover:bg-pink-600">
-                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Create Study Pack
+                <button onclick="generateStudyMaterial()" id="generateBtn" class="w-full bg-party-pink hover:bg-party-pink/90 text-party-on font-extrabold py-4 rounded-2xl brutal-btn transition text-xs flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-wait">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Create Study Pack</span>
                 </button>
             </div>
         </div>
 
-        <!-- Right Column: Study Views (Flashcards & Quizzes) -->
+        <!-- Right: Study Views -->
         <div class="lg:col-span-7 space-y-6">
 
             <!-- Tabs -->
-            <div class="brut-box rounded-2xl p-2 flex space-x-2 bg-white">
-                <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 py-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 bg-ap-pink text-white border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24]">
+            <div class="bg-party-card brutal-border rounded-2xl p-2 flex space-x-2">
+                <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 py-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2 bg-party-pink text-party-on brutal-border-sm">
                     <i class="fa-solid fa-clone"></i>
                     <span>Interactive Flashcards</span>
                 </button>
-                <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-ap-bg text-ap-text border-2 border-transparent hover:border-ap-border">
+                <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-party-raised text-party-text hover:bg-party-mint/40 border-2 border-transparent">
                     <i class="fa-solid fa-list-check"></i>
                     <span>Practice Quiz</span>
                 </button>
             </div>
 
             <!-- Loading State -->
-            <div id="loadingState" class="hidden brut-box rounded-3xl p-16 text-center space-y-4 bg-white">
+            <div id="loadingState" class="hidden bg-party-card brutal-border rounded-3xl p-16 text-center space-y-5">
                 <div class="relative w-16 h-16 mx-auto">
-                    <div class="absolute inset-0 rounded-2xl bg-ap-yellow border-3 border-ap-border animate-bounce shadow-[3px_3px_0px_#1E1E24]"></div>
+                    <div class="absolute inset-0 rounded-2xl bg-party-yellow brutal-border-sm animate-spin"></div>
                 </div>
                 <div>
-                    <h3 id="loadingTitle" class="text-base font-black tracking-wide text-ap-text">Synthesizing Notes...</h3>
-                    <p id="loadingSub" class="text-xs text-ap-muted mt-1 font-medium">Extracting definitions, flashcards, and assessment questions</p>
+                    <h3 id="loadingTitle" class="text-base font-extrabold tracking-wide">Synthesizing Notes...</h3>
+                    <p id="loadingSub" class="text-xs text-party-muted mt-1 font-medium">Extracting definitions, formulas, and assessment questions</p>
                 </div>
             </div>
 
             <!-- Flashcards View -->
             <div id="view-flashcards" class="space-y-4">
-                <div class="brut-box rounded-3xl p-8 min-h-[460px] flex flex-col justify-between bg-white">
+                <div class="bg-party-card brutal-border rounded-3xl p-8 min-h-[440px] flex flex-col justify-between relative overflow-hidden">
 
-                    <!-- Progress Header -->
-                    <div class="space-y-3 border-b-2 border-ap-border pb-4">
-                        <div class="flex items-center justify-between text-xs font-mono font-bold text-ap-text">
-                            <span id="cardCounter">No cards generated</span>
-                            <span class="text-[11px] bg-ap-yellow px-2.5 py-0.5 rounded-md border border-ap-border">Spacebar to flip</span>
+                    <div class="space-y-3 border-b-2 border-party-line pb-4">
+                        <div class="flex items-center justify-between text-xs font-mono font-bold text-party-muted">
+                            <span id="cardCounter" class="text-party-text font-extrabold text-sm">No cards generated</span>
+                            <span class="bg-party-yellow px-2.5 py-0.5 brutal-border-sm text-[11px] font-bold">Spacebar to flip</span>
                         </div>
-                        <div class="h-3 rounded-xl bg-ap-bg overflow-hidden p-0.5 border-2 border-ap-border">
-                            <div id="masteryBar" class="h-full rounded-lg bg-ap-pink transition-all duration-500" style="width:0%"></div>
+                        <div class="h-2.5 rounded-full bg-party-raised brutal-border-sm overflow-hidden p-0.5">
+                            <div id="masteryBar" class="h-full bg-party-mint rounded-full transition-all duration-500" style="width:0%"></div>
                         </div>
-                        <div id="masteryText" class="text-[11px] font-mono font-bold text-ap-muted">Mastered 0 of 0</div>
+                        <div id="masteryText" class="text-[11px] font-mono font-bold text-party-muted">Mastered 0 of 0</div>
                     </div>
 
-                    <!-- Deck Complete Banner -->
-                    <div id="deckDoneBanner" class="hidden mt-3 bg-ap-mint/30 border-2 border-ap-border rounded-2xl p-3.5 text-xs flex items-center justify-between gap-3 shadow-[2px_2px_0px_#1E1E24]">
-                        <span class="font-black text-ap-text"><i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i>You've mastered every card in this deck!</span>
-                        <button onclick="restartDeck()" class="brut-btn bg-white text-ap-text px-3 py-1.5 rounded-xl text-xs">Restart</button>
+                    <div id="deckDoneBanner" class="hidden mt-4 bg-party-mint/30 brutal-border-sm rounded-2xl p-3.5 text-xs flex items-center justify-between gap-3 font-bold">
+                        <span><i class="fa-solid fa-circle-check text-party-pink mr-1.5 text-sm"></i>You've mastered every card!</span>
+                        <button onclick="restartDeck()" class="bg-party-yellow text-party-on font-extrabold px-3.5 py-1.5 rounded-xl brutal-btn text-xs">Restart deck</button>
                     </div>
 
-                    <!-- 3D Card Area -->
+                    <!-- 3D Card -->
                     <div class="perspective-1000 my-6 cursor-pointer select-none" onclick="flipCard()">
-                        <div id="cardInner" class="relative w-full h-[240px] transform-style-3d">
+                        <div id="cardInner" class="relative w-full h-[220px] transform-style-3d">
                             <!-- Front -->
-                            <div class="absolute inset-0 rounded-3xl border-3 border-ap-border p-8 flex flex-col items-center justify-center text-center backface-hidden bg-ap-bg shadow-[4px_4px_0px_#1E1E24]">
-                                <span id="frontLabel" class="text-[10px] font-mono uppercase tracking-widest text-ap-text mb-3 bg-ap-yellow px-3 py-1 rounded-xl border-2 border-ap-border font-black shadow-[2px_2px_0px_#1E1E24]">Awaiting Notes</span>
-                                <p id="cardFrontText" class="text-base md:text-lg font-bold text-ap-text leading-relaxed max-w-xl">Drop a PDF or paste notes on the left and click "Create Study Pack" to generate flashcards.</p>
+                            <div class="absolute inset-0 rounded-2xl brutal-border p-8 flex flex-col items-center justify-center text-center backface-hidden bg-white">
+                                <span id="frontLabel" class="text-[10px] font-mono font-extrabold uppercase tracking-widest text-party-on mb-3 bg-party-yellow px-3 py-1 rounded-full brutal-border-sm">Question</span>
+                                <p id="cardFrontText" class="text-base font-extrabold text-party-text leading-relaxed max-w-xl">Drop a PDF or paste notes on the left and click "Create Study Pack" to generate flashcards.</p>
                             </div>
                             <!-- Back -->
-                            <div class="absolute inset-0 rounded-3xl border-3 border-ap-border p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 bg-ap-mint/40 shadow-[4px_4px_0px_#1E1E24]">
-                                <span id="backLabel" class="text-[10px] font-mono uppercase tracking-widest text-ap-text mb-3 bg-ap-orange px-3 py-1 rounded-xl border-2 border-ap-border font-black shadow-[2px_2px_0px_#1E1E24]">Answer</span>
-                                <p id="cardBackText" class="text-base md:text-lg font-bold text-ap-text leading-relaxed max-w-xl">Answers will appear here once synthesized.</p>
+                            <div class="absolute inset-0 rounded-2xl brutal-border p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 bg-party-raised">
+                                <span id="backLabel" class="text-[10px] font-mono font-extrabold uppercase tracking-widest text-party-on mb-3 bg-party-mint px-3 py-1 rounded-full brutal-border-sm">Answer</span>
+                                <p id="cardBackText" class="text-base font-bold text-party-on leading-relaxed max-w-xl">Answers will appear here once synthesized.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Rating Buttons -->
                     <div id="ratingRow" class="hidden grid grid-cols-2 gap-3 mb-4">
-                        <button onclick="rateCard('again')" class="brut-btn bg-ap-yellow text-ap-text py-3 rounded-2xl text-xs flex items-center justify-center space-x-2">
+                        <button onclick="rateCard('again')" class="brutal-btn bg-party-yellow text-party-on py-3 rounded-2xl text-xs font-extrabold flex items-center justify-center space-x-2">
                             <i class="fa-solid fa-rotate-left"></i>
                             <span>Review Again</span>
                         </button>
-                        <button onclick="rateCard('known')" class="brut-btn bg-ap-mint text-ap-text py-3 rounded-2xl text-xs flex items-center justify-center space-x-2">
+                        <button onclick="rateCard('known')" class="brutal-btn bg-party-mint text-party-on py-3 rounded-2xl text-xs font-extrabold flex items-center justify-center space-x-2">
                             <i class="fa-solid fa-check"></i>
                             <span>Got It!</span>
                         </button>
                     </div>
 
-                    <!-- Navigation Footer -->
-                    <div class="flex items-center justify-between border-t-2 border-ap-border pt-4">
-                        <button onclick="prevCard()" class="brut-btn bg-white px-5 py-2.5 rounded-2xl text-xs flex items-center space-x-2">
+                    <div class="flex items-center justify-between border-t-2 border-party-line pt-4">
+                        <button onclick="prevCard()" class="brutal-btn bg-party-raised px-5 py-2.5 rounded-xl text-xs font-extrabold text-party-text transition flex items-center space-x-2">
                             <i class="fa-solid fa-chevron-left"></i>
                             <span>Prev</span>
                         </button>
 
                         <div class="flex items-center space-x-1.5 flex-wrap justify-center" id="cardDots"></div>
 
-                        <button onclick="nextCard()" class="brut-btn bg-white px-5 py-2.5 rounded-2xl text-xs flex items-center space-x-2">
+                        <button onclick="nextCard()" class="brutal-btn bg-party-raised px-5 py-2.5 rounded-xl text-xs font-extrabold text-party-text transition flex items-center space-x-2">
                             <span>Next</span>
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
@@ -310,25 +288,25 @@
 
             <!-- Quiz View -->
             <div id="view-quiz" class="hidden space-y-4">
-                <div id="quizContainer" class="brut-box rounded-3xl p-8 space-y-6 bg-white">
-                    <div class="flex items-center justify-between border-b-2 border-ap-border pb-4">
-                        <span id="quizCounter" class="text-xs font-mono font-black text-ap-text">No quiz generated</span>
-                        <div class="flex items-center space-x-2 bg-ap-yellow px-3 py-1.5 rounded-xl border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24]">
-                            <i class="fa-solid fa-trophy text-amber-700 text-xs"></i>
-                            <span id="quizScore" class="text-xs font-black font-mono">Score: 0</span>
+                <div id="quizContainer" class="bg-party-card brutal-border rounded-3xl p-8 space-y-6">
+                    <div class="flex items-center justify-between border-b-2 border-party-line pb-4">
+                        <span id="quizCounter" class="text-xs font-mono font-extrabold text-party-muted">No quiz generated</span>
+                        <div class="flex items-center space-x-2 bg-party-yellow px-3 py-1 rounded-xl brutal-border-sm">
+                            <i class="fa-solid fa-trophy text-party-on text-xs"></i>
+                            <span id="quizScore" class="text-xs font-extrabold text-party-on font-mono">Score: 0</span>
                         </div>
                     </div>
 
                     <div>
-                        <h3 id="quizQuestionText" class="text-base md:text-lg font-black mb-5 leading-snug text-ap-text">Please enter your notes and click "Create Study Pack" to generate practice questions.</h3>
-                        <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3.5"></div>
+                        <h3 id="quizQuestionText" class="text-base font-extrabold mb-5 leading-snug">Please enter your notes and click "Create Study Pack" to generate practice questions.</h3>
+                        <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <div id="quizExplanation" class="hidden border-2 border-ap-border rounded-2xl p-4 text-xs font-medium text-ap-text bg-ap-purple/30 shadow-[2px_2px_0px_#1E1E24]"></div>
+                    <div id="quizExplanation" class="hidden brutal-border-sm rounded-2xl p-4 text-xs font-medium text-party-text leading-relaxed bg-party-mint/20"></div>
 
                     <div class="flex justify-end pt-2">
-                        <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden brut-btn bg-ap-pink text-white text-xs px-6 py-3 rounded-2xl">
-                            Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                        <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden brutal-btn bg-party-pink text-party-on text-xs font-extrabold px-6 py-3 rounded-2xl transition-colors">
+                            <span>Continue</span> <i class="fa-solid fa-arrow-right ml-1.5"></i>
                         </button>
                     </div>
                 </div>
@@ -338,25 +316,27 @@
     </main>
 
     <!-- ABOUT MODAL -->
-    <div id="aboutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="brut-box rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-5 bg-white shadow-[8px_8px_0px_#1E1E24]">
-            <div class="flex justify-between items-center border-b-2 border-ap-border pb-3">
-                <h3 class="text-sm font-black flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded-full bg-ap-yellow border-2 border-ap-border"></span>
+    <div id="aboutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-party-line/60 backdrop-blur-sm">
+        <div class="bg-party-card brutal-border rounded-3xl max-w-lg w-full p-8 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b-2 border-party-line pb-3">
+                <h3 class="text-sm font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-laptop-code text-party-pink"></i>
                     <span>About F&Q Generator</span>
                 </h3>
-                <button onclick="closeAboutModal()" class="brut-btn bg-ap-bg px-2.5 py-1 rounded-xl text-xs"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeAboutModal()" class="text-party-text font-bold text-base hover:text-party-pink"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="space-y-3 text-xs md:text-sm font-medium text-ap-text leading-relaxed">
-                <p><strong>F&Q Generator (Afterparty Edition)</strong> is an AI-powered study tool built for <strong>Hacktoberfest 2026</strong> / <strong>Infinity AI Forge Hackathon</strong> (Challenge 06).</p>
-                <div class="bg-ap-bg p-4 rounded-2xl border-2 border-ap-border space-y-2 shadow-[2px_2px_0px_#1E1E24]">
-                    <h4 class="font-black text-ap-pink">Key Features:</h4>
-                    <ul class="list-disc list-inside space-y-1 text-ap-muted text-xs">
-                        <li>Instant PDF & text note parsing in browser via PDF.js</li>
-                        <li>Gemma 4 model integration (<code class="font-mono text-ap-text">gemma-4-26b-a4b-it</code>)</li>
-                        <li>3D flippable flashcards with spaced repetition rating</li>
-                        <li>Interactive practice quiz with explanations</li>
-                        <li>Anki CSV & JSON schema exports</li>
+
+            <div class="space-y-4 text-xs font-medium text-party-text leading-relaxed">
+                <p>
+                    <strong>F&Q Generator</strong> is an AI-powered study tool built for <strong>Hacktoberfest 2026</strong> as part of the <strong>Infinity AI Forge Hackathon</strong> (Challenge 06).
+                </p>
+                <div class="bg-party-raised p-4 rounded-2xl brutal-border-sm space-y-2">
+                    <h4 class="font-extrabold text-party-on">Core Features:</h4>
+                    <ul class="list-disc list-inside space-y-1.5 text-party-muted">
+                        <li>Instant PDF & text note parsing via PDF.js.</li>
+                        <li>Gemma 4 model integration (<code class="text-party-on font-bold">gemma-4-26b-a4b-it</code>).</li>
+                        <li>3D interactive flashcards & practice quizzes.</li>
+                        <li>Anki CSV & structured JSON schema exports.</li>
                     </ul>
                 </div>
             </div>
@@ -364,161 +344,95 @@
     </div>
 
     <!-- EXPORT MODAL -->
-    <div id="exportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="brut-box rounded-3xl max-w-md w-full p-6 md:p-8 space-y-5 bg-white shadow-[8px_8px_0px_#1E1E24]">
-            <div class="flex justify-between items-center border-b-2 border-ap-border pb-3">
-                <h3 class="text-sm font-black flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded-full bg-ap-pink border-2 border-ap-border"></span>
+    <div id="exportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-party-line/60 backdrop-blur-sm">
+        <div class="bg-party-card brutal-border rounded-3xl max-w-md w-full p-8 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b-2 border-party-line pb-3">
+                <h3 class="text-sm font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-file-export text-party-mint"></i>
                     <span>Export Study Package</span>
                 </h3>
-                <button onclick="closeExportModal()" class="brut-btn bg-ap-bg px-2.5 py-1 rounded-xl text-xs"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeExportModal()" class="text-party-text font-bold text-base hover:text-party-pink"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-xs text-ap-muted font-medium">Export your synthesized study pack into standard formats for Anki or external study.</p>
-            <div class="grid grid-cols-1 gap-3.5">
-                <button onclick="exportAnkiCSV()" class="brut-btn bg-ap-mint text-ap-text p-4 rounded-2xl text-left flex items-center justify-between group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-white border-2 border-ap-border flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#1E1E24]">CSV</div>
-                        <div>
-                            <h4 class="text-xs font-black">Anki Flashcard Deck</h4>
-                            <p class="text-[11px] text-ap-muted">Formatted CSV for Anki import</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-download"></i>
-                </button>
-                <button onclick="exportJSON()" class="brut-btn bg-ap-yellow text-ap-text p-4 rounded-2xl text-left flex items-center justify-between group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-white border-2 border-ap-border flex items-center justify-center font-black text-xs shadow-[2px_2px_0px_#1E1E24]">JSON</div>
-                        <div>
-                            <h4 class="text-xs font-black">Structured JSON Schema</h4>
-                            <p class="text-[11px] text-ap-muted">Full predictable study pack object</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-download"></i>
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="brut-box rounded-3xl max-w-md w-full p-6 md:p-8 space-y-5 bg-white shadow-[8px_8px_0px_#1E1E24]">
-            <div class="flex justify-between items-center border-b-2 border-ap-border pb-3">
-                <h3 class="text-sm font-black flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded-full bg-ap-orange border-2 border-ap-border"></span>
-                    <span>API Key & Model Settings</span>
-                </h3>
-                <button onclick="closeSettingsModal()" class="brut-btn bg-ap-bg px-2.5 py-1 rounded-xl text-xs"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <p class="text-xs text-ap-muted font-medium">Paste your Gemini API key (free from Google AI Studio). Stored locally in your browser.</p>
-            <div class="space-y-1.5">
-                <label class="text-xs font-bold text-ap-text">Gemini API Key</label>
-                <div class="input-field rounded-2xl flex items-center">
-                    <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="AIzaSy..." class="bg-transparent w-full p-3 text-xs font-mono text-ap-text focus:outline-none">
-                    <button onclick="toggleKeyVisibility()" class="px-3 text-ap-muted hover:text-ap-text"><i id="keyEye" class="fa-solid fa-eye"></i></button>
-                </div>
-            </div>
-            <div class="space-y-1.5">
-                <label class="text-xs font-bold text-ap-text">Model</label>
-                <select id="modelSelect" class="w-full input-field rounded-2xl p-3 text-xs font-bold text-ap-text bg-white">
-                    <option value="gemma-4-26b-a4b-it">Gemma 4 26B (default)</option>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (fast & reliable)</option>
-                </select>
-            </div>
-            <p id="settingsStatus" class="text-[11px] font-mono text-ap-muted min-h-[16px]"></p>
-            <div class="flex items-center justify-between gap-3 pt-2">
-                <button onclick="clearSettings()" class="brut-btn bg-white text-red-600 px-4 py-2.5 rounded-2xl text-xs font-bold">Remove Key</button>
-                <button onclick="saveSettings()" class="brut-btn bg-ap-pink text-white px-6 py-2.5 rounded-2xl text-xs font-black">Save Settings</button>
+            <p class="text-xs font-medium text-party-muted leading-relaxed">
+                Export your synthesized study pack into standard formats for external review or Anki spaced-repetition deck importing.
+            </p>
+
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="exportAnkiCSV()" class="bg-party-raised hover:bg-party-mint/30 brutal-btn p-4 rounded-2xl text-left transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-party-yellow brutal-border-sm flex items-center justify-center font-extrabold text-xs">CSV</div>
+                        <div>
+                            <h4 class="text-xs font-extrabold">Anki Flashcard Deck</h4>
+                            <p class="text-[11px] text-party-muted font-medium">Formatted CSV ready for Anki import</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-xs"></i>
+                </button>
+
+                <button onclick="exportJSON()" class="bg-party-raised hover:bg-party-orange/30 brutal-btn p-4 rounded-2xl text-left transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-party-mint brutal-border-sm flex items-center justify-center font-extrabold text-xs">JSON</div>
+                        <div>
+                            <h4 class="text-xs font-extrabold">Structured JSON Schema</h4>
+                            <p class="text-[11px] text-party-muted font-medium">Full study pack object schema</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-xs"></i>
+                </button>
             </div>
         </div>
     </div>
 
     <!-- SAVED PACKS MODAL -->
-    <div id="packsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="brut-box rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-5 bg-white shadow-[8px_8px_0px_#1E1E24]">
-            <div class="flex justify-between items-center border-b-2 border-ap-border pb-3">
-                <h3 class="text-sm font-black flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded-full bg-ap-mint border-2 border-ap-border"></span>
-                    <span>My Saved Study Packs</span>
+    <div id="packsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-party-line/60 backdrop-blur-sm">
+        <div class="bg-party-card brutal-border rounded-3xl max-w-lg w-full p-8 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b-2 border-party-line pb-3">
+                <h3 class="text-sm font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-folder-open text-party-yellow"></i>
+                    <span>My Study Packs</span>
                 </h3>
-                <button onclick="closePacksModal()" class="brut-btn bg-ap-bg px-2.5 py-1 rounded-xl text-xs"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closePacksModal()" class="text-party-text font-bold text-base hover:text-party-pink"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-[11px] text-ap-muted font-medium">Stored automatically in your browser (last 20 packs).</p>
+            <p class="text-[11px] font-medium text-party-muted">Saved automatically in this browser (latest 20).</p>
             <div id="packList" class="space-y-3 max-h-[55vh] overflow-y-auto pr-1"></div>
         </div>
     </div>
 
     <script>
         let studyData = { flashcards: [], quiz: [] };
-        let cardStatus = []; // 'new' | 'known' | 'again'
+        let cardStatus = [];
         let currentCardIndex = 0;
         let isFlipped = false;
         let currentQuizIndex = 0;
         let score = 0;
 
-        const DEFAULT_MODEL = 'gemma-4-26b-a4b-it';
-        const TAB_ACTIVE = "flex-1 py-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 bg-ap-pink text-white border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24]";
-        const TAB_IDLE = "flex-1 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-ap-bg text-ap-text border-2 border-transparent hover:border-ap-border";
+        const MODEL = 'gemma-4-26b-a4b-it';
+        const TAB_ACTIVE = "flex-1 py-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2 bg-party-pink text-party-on brutal-border-sm";
+        const TAB_IDLE = "flex-1 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-party-raised text-party-text hover:bg-party-mint/40 border-2 border-transparent";
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
-        // LocalStorage helpers
         function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
         function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
-        function lsRemove(key) { try { localStorage.removeItem(key); } catch (e) {} }
 
-        // API Key & Model
         function getApiKey() {
-            const stored = (lsGet('ap_api_key') || '').trim();
-            if (stored) return stored;
             const fromConfig = typeof CONFIG !== 'undefined' ? (CONFIG.GEMINI_API_KEY || '').trim() : '';
             return fromConfig && fromConfig !== 'YOUR_ACTUAL_API_KEY_HERE' ? fromConfig : '';
         }
-        function getModel() { return lsGet('ap_model') || DEFAULT_MODEL; }
 
-        function openSettingsModal(msg) {
-            document.getElementById('apiKeyInput').value = lsGet('ap_api_key') || '';
-            document.getElementById('apiKeyInput').type = 'password';
-            document.getElementById('keyEye').className = 'fa-solid fa-eye';
-            document.getElementById('modelSelect').value = getModel();
-            const status = document.getElementById('settingsStatus');
-            if (msg) status.textContent = msg;
-            else if (!lsGet('ap_api_key') && getApiKey()) status.textContent = 'Using API key from config.js.';
-            else status.textContent = '';
-            document.getElementById('settingsModal').classList.remove('hidden');
-        }
-        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
-        function toggleKeyVisibility() {
-            const input = document.getElementById('apiKeyInput');
-            const show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            document.getElementById('keyEye').className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-        }
-        function saveSettings() {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            const model = document.getElementById('modelSelect').value;
-            lsSet('ap_model', model);
-            if (key) lsSet('ap_api_key', key);
-            document.getElementById('settingsStatus').textContent = key ? 'Saved successfully!' : 'Model saved.';
-            if (key) setTimeout(closeSettingsModal, 700);
-        }
-        function clearSettings() {
-            lsRemove('ap_api_key');
-            document.getElementById('apiKeyInput').value = '';
-            document.getElementById('settingsStatus').textContent = 'API key removed from browser.';
-        }
-
-        // Saved Packs
+        // Saved packs
         function loadPacks() {
-            try { return JSON.parse(lsGet('ap_packs') || '[]'); } catch (e) { return []; }
+            try { return JSON.parse(lsGet('fq_packs') || '[]'); } catch (e) { return []; }
         }
         function savePack(notes, data) {
             const firstLine = (notes.split('\n').map(l => l.trim()).find(l => l) || 'Untitled pack');
-            const title = firstLine.length > 42 ? firstLine.slice(0, 42) + '…' : firstLine;
+            const title = firstLine.length > 48 ? firstLine.slice(0, 48) + '…' : firstLine;
             const packs = loadPacks();
             packs.unshift({ id: String(Date.now()), title, date: new Date().toLocaleString(), data });
-            lsSet('ap_packs', JSON.stringify(packs.slice(0, 20)));
+            lsSet('fq_packs', JSON.stringify(packs.slice(0, 20)));
         }
         function openPacksModal() { renderPacks(); document.getElementById('packsModal').classList.remove('hidden'); }
         function closePacksModal() { document.getElementById('packsModal').classList.add('hidden'); }
@@ -526,18 +440,18 @@
             const list = document.getElementById('packList');
             const packs = loadPacks();
             if (!packs.length) {
-                list.innerHTML = '<p class="text-xs text-ap-muted text-center py-8 font-medium">No saved study packs yet. Generate your first pack!</p>';
+                list.innerHTML = '<p class="text-xs font-medium text-party-muted text-center py-8">No saved packs yet. Generate one and it will appear here.</p>';
                 return;
             }
             list.innerHTML = packs.map(p => `
-                <div class="brut-box-sm rounded-2xl p-4 flex items-center justify-between gap-3 bg-ap-bg">
+                <div class="bg-party-raised brutal-border-sm rounded-2xl p-4 flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <h4 class="text-xs font-black truncate">${escapeHtml(p.title)}</h4>
-                        <p class="text-[11px] text-ap-muted mt-0.5 font-medium">${escapeHtml(p.date)} · ${p.data.flashcards.length} cards · ${p.data.quiz.length} questions</p>
+                        <h4 class="text-xs font-extrabold truncate">${escapeHtml(p.title)}</h4>
+                        <p class="text-[11px] font-medium text-party-muted mt-0.5">${escapeHtml(p.date)} · ${p.data.flashcards.length} cards · ${p.data.quiz.length} questions</p>
                     </div>
                     <div class="flex items-center space-x-2 shrink-0">
-                        <button data-open="${p.id}" class="brut-btn bg-ap-mint px-3 py-1.5 rounded-xl text-xs">Open</button>
-                        <button data-del="${p.id}" class="text-red-500 hover:text-red-700 px-2 py-1 font-bold"><i class="fa-solid fa-trash"></i></button>
+                        <button data-open="${p.id}" class="bg-party-mint text-party-on px-3.5 py-1.5 rounded-xl text-xs font-extrabold brutal-btn">Open</button>
+                        <button data-del="${p.id}" class="text-party-muted hover:text-party-rose px-2 py-1.5 transition"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>`).join('');
         }
@@ -553,21 +467,20 @@
                 }
             } else if (delBtn) {
                 const packs = loadPacks().filter(p => p.id !== delBtn.dataset.del);
-                lsSet('ap_packs', JSON.stringify(packs));
+                lsSet('fq_packs', JSON.stringify(packs));
                 renderPacks();
             }
         });
 
-        // PDF & File Drop
+        // PDF & file handling
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
-
         dropzone.addEventListener('click', () => fileInput.click());
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-ap-pink'); });
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-ap-pink'));
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-party-pink'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-party-pink'));
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropzone.classList.remove('border-ap-pink');
+            dropzone.classList.remove('border-party-pink');
             if (e.dataTransfer.files.length) {
                 fileInput.files = e.dataTransfer.files;
                 handleFileSelect({ target: fileInput });
@@ -577,7 +490,6 @@
         async function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             if (file.type === 'application/pdf') {
                 const reader = new FileReader();
                 reader.onload = async function() {
@@ -614,7 +526,7 @@
             document.getElementById(`tab-${tabName}`).className = TAB_ACTIVE;
         }
 
-        // Flashcards Logic
+        // Flashcards logic
         function showCardFace(frontLabel, front, backLabel, back) {
             const apply = () => {
                 document.getElementById('frontLabel').innerText = frontLabel;
@@ -638,7 +550,7 @@
             dotsContainer.innerHTML = '';
 
             if (!cards.length) {
-                showCardFace('Awaiting Notes', 'Please drop a PDF or paste notes to generate cards.', 'Answer', 'Answers will appear here.');
+                showCardFace('Question', 'Please drop a PDF or paste notes to generate cards.', 'Answer', 'Answers will appear here.');
                 document.getElementById('cardCounter').innerText = 'No cards generated';
                 ratingRow.classList.add('hidden');
                 updateMastery();
@@ -653,11 +565,11 @@
             cards.forEach((_, idx) => {
                 const dot = document.createElement('div');
                 const isCurrent = idx === currentCardIndex;
-                let bg = 'bg-ap-bg border border-ap-border';
-                if (cardStatus[idx] === 'known') bg = 'bg-ap-mint';
-                else if (cardStatus[idx] === 'again') bg = 'bg-ap-yellow';
-                else if (isCurrent) bg = 'bg-ap-pink';
-                dot.className = `h-2.5 rounded-full transition-all ${isCurrent ? 'w-6' : 'w-2.5'} ${bg}`;
+                let bg = 'bg-party-raised border-2 border-party-line';
+                if (cardStatus[idx] === 'known') bg = 'bg-party-mint';
+                else if (cardStatus[idx] === 'again') bg = 'bg-party-yellow';
+                else if (isCurrent) bg = 'bg-party-pink';
+                dot.className = `h-2 rounded-full transition-all ${isCurrent ? 'w-6' : 'w-2'} ${bg}`;
                 dotsContainer.appendChild(dot);
             });
             updateMastery();
@@ -689,7 +601,6 @@
             const n = (studyData.flashcards || []).length;
             if (!n) return;
             cardStatus[currentCardIndex] = status;
-
             let next = -1;
             for (let step = 1; step <= n; step++) {
                 const idx = (currentCardIndex + step) % n;
@@ -705,7 +616,7 @@
             updateFlashcardUI();
         }
 
-        // Quiz Logic
+        // Quiz logic
         function initQuiz() {
             currentQuizIndex = 0;
             score = 0;
@@ -730,8 +641,8 @@
             optionsBox.innerHTML = '';
             q.options.forEach((opt, idx) => {
                 const btn = document.createElement('button');
-                btn.className = "w-full text-left brut-box-sm rounded-2xl p-4 text-xs font-bold transition flex items-center justify-between hover:bg-ap-bg";
-                btn.innerHTML = `<span>${escapeHtml(opt)}</span> <i class="fa-regular fa-circle text-ap-muted"></i>`;
+                btn.className = "w-full text-left bg-party-raised hover:bg-party-yellow/20 p-4 rounded-2xl text-xs font-bold transition text-party-text brutal-border-sm flex items-center justify-between";
+                btn.innerHTML = `<span>${escapeHtml(opt)}</span> <i class="fa-regular fa-circle text-party-muted"></i>`;
                 btn.onclick = () => selectQuizOption(idx, q.answer, q.explanation);
                 optionsBox.appendChild(btn);
             });
@@ -742,11 +653,11 @@
             for (let i = 0; i < options.length; i++) {
                 options[i].disabled = true;
                 if (i === correctIdx) {
-                    options[i].className = "w-full text-left brut-box-sm rounded-2xl p-4 text-xs font-bold bg-ap-mint/40 border-2 border-emerald-600 flex items-center justify-between";
-                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
+                    options[i].className = "w-full text-left p-4 rounded-2xl text-xs font-bold bg-party-mint/40 brutal-border-sm text-party-on flex items-center justify-between";
+                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-check text-party-on"></i>`;
                 } else if (i === selectedIdx) {
-                    options[i].className = "w-full text-left brut-box-sm rounded-2xl p-4 text-xs font-bold bg-rose-100 border-2 border-rose-600 flex items-center justify-between";
-                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-xmark text-rose-600"></i>`;
+                    options[i].className = "w-full text-left p-4 rounded-2xl text-xs font-bold bg-party-rose/20 brutal-border-sm text-party-rose flex items-center justify-between";
+                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-xmark text-party-rose"></i>`;
                 }
             }
             if (selectedIdx === correctIdx) score++;
@@ -765,10 +676,10 @@
             } else {
                 document.getElementById('quizContainer').innerHTML = `
                     <div class="text-center py-12 space-y-4">
-                        <i class="fa-solid fa-award text-5xl text-ap-orange animate-bounce"></i>
-                        <h3 class="text-xl font-black">Quiz Completed!</h3>
-                        <p class="text-xs text-ap-muted font-bold">Your final score is ${score} out of ${studyData.quiz.length}</p>
-                        <button onclick="restartQuiz()" class="brut-btn bg-ap-pink text-white px-6 py-3 rounded-2xl text-xs font-black">Try Again</button>
+                        <i class="fa-solid fa-award text-5xl text-party-yellow"></i>
+                        <h3 class="text-xl font-extrabold">Quiz Completed!</h3>
+                        <p class="text-xs font-bold text-party-muted">Your final score is ${score} out of ${studyData.quiz.length}</p>
+                        <button onclick="restartQuiz()" class="brutal-btn bg-party-pink text-party-on px-6 py-3 rounded-2xl text-xs font-extrabold transition-colors">Try Again</button>
                     </div>
                 `;
             }
@@ -776,21 +687,21 @@
 
         function restartQuiz() {
             document.getElementById('quizContainer').innerHTML = `
-                <div class="flex items-center justify-between border-b-2 border-ap-border pb-4">
-                    <span id="quizCounter" class="text-xs font-mono font-black text-ap-text"></span>
-                    <div class="flex items-center space-x-2 bg-ap-yellow px-3 py-1.5 rounded-xl border-2 border-ap-border shadow-[2px_2px_0px_#1E1E24]">
-                        <i class="fa-solid fa-trophy text-amber-700 text-xs"></i>
-                        <span id="quizScore" class="text-xs font-black font-mono">Score: 0</span>
+                <div class="flex items-center justify-between border-b-2 border-party-line pb-4">
+                    <span id="quizCounter" class="text-xs font-mono font-extrabold text-party-muted"></span>
+                    <div class="flex items-center space-x-2 bg-party-yellow px-3 py-1 rounded-xl brutal-border-sm">
+                        <i class="fa-solid fa-trophy text-party-on text-xs"></i>
+                        <span id="quizScore" class="text-xs font-extrabold text-party-on font-mono">Score: 0</span>
                     </div>
                 </div>
                 <div>
-                    <h3 id="quizQuestionText" class="text-base md:text-lg font-black mb-5 leading-snug text-ap-text"></h3>
-                    <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3.5"></div>
+                    <h3 id="quizQuestionText" class="text-base font-extrabold mb-5 leading-snug"></h3>
+                    <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3"></div>
                 </div>
-                <div id="quizExplanation" class="hidden border-2 border-ap-border rounded-2xl p-4 text-xs font-medium text-ap-text bg-ap-purple/30 shadow-[2px_2px_0px_#1E1E24]"></div>
+                <div id="quizExplanation" class="hidden brutal-border-sm rounded-2xl p-4 text-xs font-medium text-party-text leading-relaxed bg-party-mint/20"></div>
                 <div class="flex justify-end pt-2">
-                    <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden brut-btn bg-ap-pink text-white text-xs px-6 py-3 rounded-2xl">
-                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                    <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden brutal-btn bg-party-pink text-party-on text-xs font-extrabold px-6 py-3 rounded-2xl transition-colors">
+                        <span>Continue</span> <i class="fa-solid fa-arrow-right ml-1.5"></i>
                     </button>
                 </div>`;
             initQuiz();
@@ -805,7 +716,7 @@
             switchTab('flashcards');
         }
 
-        // AI Generation
+        // AI generation
         function splitIntoChunks(text, size = 9000, maxChunks = 6) {
             text = text.trim();
             if (text.length <= size) return [text];
@@ -847,23 +758,21 @@ Notes: ${notes}`;
                     });
                     break;
                 } catch (netErr) {
-                    if (attempt === 3) throw new Error('Network connection failed. Try Gemini 2.5 Flash.');
+                    if (attempt === 3) throw new Error('Network connection failed. Please check your internet connection.');
                     await new Promise(r => setTimeout(r, 1500 * attempt));
                 }
             }
-
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(`API ${response.status}: ${data.error?.message || 'Unknown error'}`);
+                throw new Error(`API error ${response.status}: ${data.error?.message || 'Unknown error'}`);
             }
-
             const parts = data.candidates?.[0]?.content?.parts || [];
             const textOutput = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-            if (!textOutput) throw new Error('Empty response from model.');
+            if (!textOutput) throw new Error('Model returned an empty response.');
 
             const start = textOutput.indexOf('{');
             const end = textOutput.lastIndexOf('}');
-            if (start === -1 || end === -1) throw new Error('Response did not contain JSON.');
+            if (start === -1 || end === -1) throw new Error('Response did not contain valid JSON.');
             return JSON.parse(textOutput.slice(start, end + 1));
         }
 
@@ -890,15 +799,14 @@ Notes: ${notes}`;
             const numQuiz = Math.min(15, Math.max(2, parseInt(document.getElementById('numQuiz').value) || 5));
 
             if (!apiKey) {
-                openSettingsModal('Please enter your Gemini API key to generate study packs.');
+                alert("Gemini API key not found. Please ensure your config.js defines CONFIG.GEMINI_API_KEY.");
                 return;
             }
             if (!notes) {
-                alert("Please paste study notes or upload a PDF document first.");
+                alert("Please paste study notes or drop a PDF document first.");
                 return;
             }
 
-            const model = getModel();
             const chunks = splitIntoChunks(notes);
             const cardsPer = chunks.length === 1 ? numCards : Math.max(1, Math.ceil(numCards / chunks.length));
             const quizPer = chunks.length === 1 ? numQuiz : Math.max(1, Math.ceil(numQuiz / chunks.length));
@@ -916,10 +824,11 @@ Notes: ${notes}`;
                         ? `Synthesizing part ${i + 1} of ${chunks.length}...`
                         : 'Synthesizing Notes...';
                     try {
-                        const part = sanitizeStudyData(await callModel(buildPrompt(chunks[i], cardsPer, quizPer), apiKey, model));
+                        const part = sanitizeStudyData(await callModel(buildPrompt(chunks[i], cardsPer, quizPer), apiKey, MODEL));
                         merged.flashcards.push(...part.flashcards);
                         merged.quiz.push(...part.quiz);
                     } catch (err) {
+                        console.error(`Section ${i + 1} failed:`, err);
                         lastError = err;
                     }
                 }
@@ -940,6 +849,7 @@ Notes: ${notes}`;
                 applyStudyData(merged);
                 savePack(notes, merged);
             } catch (err) {
+                console.error(err);
                 alert("Generation error: " + err.message);
             } finally {
                 btn.disabled = false;
@@ -953,9 +863,15 @@ Notes: ${notes}`;
         function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
         function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
 
+        ['aboutModal', 'exportModal', 'packsModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target.id === id) document.getElementById(id).classList.add('hidden');
+            });
+        });
+
         // Exports
         function exportAnkiCSV() {
-            if (!studyData.flashcards.length) { alert("No flashcards to export!"); return; }
+            if (!studyData.flashcards.length) { alert("No flashcards to export yet!"); return; }
             let csv = "Front,Back\n";
             studyData.flashcards.forEach(c => {
                 csv += `"${c.front.replace(/"/g, '""')}","${c.back.replace(/"/g, '""')}"\n`;
@@ -969,7 +885,7 @@ Notes: ${notes}`;
         }
 
         function exportJSON() {
-            if (!studyData.flashcards.length) { alert("No study pack to export!"); return; }
+            if (!studyData.flashcards.length) { alert("No study pack to export yet!"); return; }
             const blob = new Blob([JSON.stringify(studyData, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = window.URL.createObjectURL(blob);
@@ -978,10 +894,10 @@ Notes: ${notes}`;
             closeExportModal();
         }
 
-        // Keyboard navigation
+        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeAboutModal(); closeExportModal(); closeSettingsModal(); closePacksModal();
+                closeAboutModal(); closeExportModal(); closePacksModal();
                 return;
             }
             const tag = (e.target.tagName || '').toLowerCase();
