@@ -29,25 +29,26 @@ Anki & JSON Export: Export study packs directly into Anki-ready CSV format or cl
 * Storage & Exports:** Browser LocalStorage, Blob CSV/JSON Downloaders
 
 ## Setup & Installation:
- ## I) Prerequisites
+ ## I) Prerequisites:
  *Any modern Web Browser (Chrome, Firefox, Edge, Safari).
  *A Google Gemini API Key (with access to gemma-4-26b-a4b-it or Gemini models).
 
- ##II) Installation Steps
+ ## II) Installation Steps:
+ 
   1)Clone the Repository:
-  git clone https://github.com/your-username/FlashCard_Hactober2026.git
-  cd FlashCard_Hactober2026
+   git clone https://github.com/your-username/FlashCard_Hactober2026.git
+   cd FlashCard_Hactober2026
   
   2)Configure API Key:
-  Create a config.js file in the root directory:
-  const CONFIG = {
-    GEMINI_API_KEY: "YOUR_ACTUAL_GEMINI_API_KEY"
-  };
+   Create a config.js file in the root directory:
+   const CONFIG = {
+     GEMINI_API_KEY: "YOUR_ACTUAL_GEMINI_API_KEY"
+   };
   
   3)Run the Project:
-  Simply open index.html in your favorite web browser, or launch it using a local development server (e.g., VS Code Live Server):
-  Using Python simple HTTP server (optional)
-  python -m http.server 8000
+   Simply open index.html in your favorite web browser, or launch it using a local development server (e.g., VS Code Live Server):
+   Using Python simple HTTP server (optional)
+   python -m http.server 8000
 
   ## Some Keyboard shortcuts that are useful:
   Space : Flip Flashcard
