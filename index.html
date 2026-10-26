@@ -39,8 +39,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
-    <!-- API key lives in a local, gitignored config.js -->
-    <script src="config.js" onerror="console.warn('config.js not found.')"></script>
+    <!-- Optional: local, gitignored config.js with  const CONFIG = { GEMINI_API_KEY: "..." };
+         Visitors can instead paste their own key via the "API Key" button. -->
+    <script src="config.js" onerror="console.warn('config.js not found (optional).')"></script>
 
     <style>
         html { scroll-behavior: smooth; }
@@ -82,7 +83,7 @@
         <div class="flex items-center space-x-4">
             <h1 class="font-extrabold text-lg tracking-tight flex items-center space-x-2">
                 <span class="text-forest-brand">F&Q</span>
-                <span>Generator</span>
+                <span class="hidden sm:inline">Generator</span>
             </h1>
             <button onclick="openAboutModal()" class="text-xs font-medium text-forest-muted hover:text-forest-text bg-forest-panel hover:bg-forest-raised px-3 py-1.5 rounded-lg border border-forest-line transition flex items-center space-x-1.5">
                 <i class="fa-solid fa-circle-info text-forest-brand"></i>
@@ -90,10 +91,20 @@
             </button>
         </div>
 
-        <button onclick="openExportModal()" class="bg-forest-panel hover:bg-forest-raised text-forest-muted hover:text-forest-text px-3.5 py-2 rounded-xl text-xs font-medium border border-forest-line transition flex items-center space-x-2">
-            <i class="fa-solid fa-download text-forest-brand"></i>
-            <span class="hidden sm:inline">Export Study Pack</span>
-        </button>
+        <div class="flex items-center space-x-2">
+            <button onclick="openPacksModal()" class="bg-forest-panel hover:bg-forest-raised text-forest-muted hover:text-forest-text px-3.5 py-2 rounded-xl text-xs font-medium border border-forest-line transition flex items-center space-x-2">
+                <i class="fa-solid fa-folder-open text-forest-amber"></i>
+                <span class="hidden sm:inline">My Packs</span>
+            </button>
+            <button onclick="openSettingsModal()" class="bg-forest-panel hover:bg-forest-raised text-forest-muted hover:text-forest-text px-3.5 py-2 rounded-xl text-xs font-medium border border-forest-line transition flex items-center space-x-2">
+                <i class="fa-solid fa-key text-forest-mint"></i>
+                <span class="hidden sm:inline">API Key</span>
+            </button>
+            <button onclick="openExportModal()" class="bg-forest-panel hover:bg-forest-raised text-forest-muted hover:text-forest-text px-3.5 py-2 rounded-xl text-xs font-medium border border-forest-line transition flex items-center space-x-2">
+                <i class="fa-solid fa-download text-forest-brand"></i>
+                <span class="hidden sm:inline">Export Study Pack</span>
+            </button>
+        </div>
     </header>
 
     <!-- Hero (full screen: notes section only appears after scrolling) -->
@@ -155,7 +166,7 @@
                     </div>
                 </div>
 
-                <button onclick="generateStudyMaterial()" id="generateBtn" class="w-full bg-forest-brand hover:bg-forest-mint text-forest-on font-bold py-3.5 rounded-xl transition-colors">
+                <button onclick="generateStudyMaterial()" id="generateBtn" class="w-full bg-forest-brand hover:bg-forest-mint text-forest-on font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-wait">
                     Create a Study Pack
                 </button>
             </div>
@@ -181,8 +192,8 @@
                     <div class="absolute inset-0 rounded-full border-4 border-forest-brand border-t-transparent animate-spin"></div>
                 </div>
                 <div>
-                    <h3 class="text-base font-bold tracking-wide">Synthesizing Notes...</h3>
-                    <p class="text-xs text-forest-muted mt-1">Extracting definitions, formulas, and assessment questions</p>
+                    <h3 id="loadingTitle" class="text-base font-bold tracking-wide">Synthesizing Notes...</h3>
+                    <p id="loadingSub" class="text-xs text-forest-muted mt-1">Extracting definitions, formulas, and assessment questions</p>
                 </div>
             </div>
 
@@ -190,9 +201,20 @@
             <div id="view-flashcards" class="space-y-4">
                 <div class="bg-forest-panel rounded-2xl p-8 min-h-[420px] flex flex-col justify-between border border-forest-line relative overflow-hidden">
 
-                    <div class="flex items-center justify-between text-xs font-mono text-forest-muted border-b border-forest-line pb-4">
-                        <span id="cardCounter" class="text-forest-text font-bold">No cards generated</span>
-                        <span class="text-[11px]">Click card or press Space to flip</span>
+                    <div class="space-y-3 border-b border-forest-line pb-4">
+                        <div class="flex items-center justify-between text-xs font-mono text-forest-muted">
+                            <span id="cardCounter" class="text-forest-text font-bold">No cards generated</span>
+                            <span class="text-[11px]">Click card or press Space to flip</span>
+                        </div>
+                        <div class="h-1.5 rounded-full bg-forest-line overflow-hidden">
+                            <div id="masteryBar" class="h-full bg-forest-brand transition-all duration-500" style="width:0%"></div>
+                        </div>
+                        <div id="masteryText" class="text-[11px] font-mono text-forest-muted">Mastered 0 of 0</div>
+                    </div>
+
+                    <div id="deckDoneBanner" class="hidden mt-4 bg-forest-brand/10 border border-forest-brand/30 rounded-xl p-3 text-xs flex items-center justify-between gap-3">
+                        <span class="text-forest-mint font-semibold"><i class="fa-solid fa-circle-check mr-1.5"></i>You've mastered every card.</span>
+                        <button onclick="restartDeck()" class="bg-forest-brand hover:bg-forest-mint text-forest-on font-bold px-3 py-1.5 rounded-lg transition-colors">Restart deck</button>
                     </div>
 
                     <div class="perspective-1000 my-6 cursor-pointer select-none" onclick="flipCard()">
@@ -209,13 +231,24 @@
                         </div>
                     </div>
 
+                    <div id="ratingRow" class="hidden grid grid-cols-2 gap-3 mb-4">
+                        <button onclick="rateCard('again')" class="border border-forest-amber/50 text-forest-amber hover:bg-forest-amber/10 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Review again</span>
+                        </button>
+                        <button onclick="rateCard('known')" class="bg-forest-brand hover:bg-forest-mint text-forest-on py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Got it</span>
+                        </button>
+                    </div>
+
                     <div class="flex items-center justify-between border-t border-forest-line pt-4">
                         <button onclick="prevCard()" class="bg-forest-raised hover:bg-forest-line px-5 py-2.5 rounded-xl text-xs font-semibold text-forest-text transition flex items-center space-x-2">
                             <i class="fa-solid fa-chevron-left"></i>
                             <span>Previous</span>
                         </button>
 
-                        <div class="flex items-center space-x-1.5" id="cardDots"></div>
+                        <div class="flex items-center space-x-1.5 flex-wrap justify-center" id="cardDots"></div>
 
                         <button onclick="nextCard()" class="bg-forest-raised hover:bg-forest-line px-5 py-2.5 rounded-xl text-xs font-semibold text-forest-text transition flex items-center space-x-2">
                             <span>Next</span>
@@ -324,13 +357,70 @@
         </div>
     </div>
 
+    <!-- API KEY / SETTINGS MODAL -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div class="bg-forest-panel rounded-2xl max-w-md w-full p-6 border border-forest-line shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-forest-line pb-3">
+                <h3 class="text-sm font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-key text-forest-mint"></i>
+                    <span>API Key & Model</span>
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-forest-muted hover:text-forest-text text-sm" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <p class="text-xs text-forest-muted leading-relaxed">
+                Paste your own Gemini API key (free from Google AI Studio). It is saved only in this browser and sent only to Google's API.
+            </p>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-forest-muted">API key</label>
+                <div class="input-field rounded-xl flex items-center">
+                    <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Gemini API key" class="bg-transparent w-full p-3 text-xs font-mono focus:outline-none">
+                    <button onclick="toggleKeyVisibility()" class="px-3 text-forest-muted hover:text-forest-text" aria-label="Show or hide key"><i id="keyEye" class="fa-solid fa-eye"></i></button>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-forest-muted">Model</label>
+                <select id="modelSelect" class="w-full input-field rounded-xl p-3 text-xs focus:outline-none">
+                    <option value="gemma-4-26b-a4b-it">Gemma 4 26B (default)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (fast, good for testing)</option>
+                </select>
+            </div>
+
+            <p id="settingsStatus" class="text-[11px] text-forest-muted min-h-[16px]"></p>
+
+            <div class="flex items-center justify-between gap-3">
+                <button onclick="clearSettings()" class="border border-forest-line text-forest-muted hover:text-forest-rose hover:border-forest-rose/50 px-4 py-2.5 rounded-xl text-xs font-semibold transition">Remove saved key</button>
+                <button onclick="saveSettings()" class="bg-forest-brand hover:bg-forest-mint text-forest-on px-6 py-2.5 rounded-xl text-xs font-bold transition-colors">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVED PACKS MODAL -->
+    <div id="packsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div class="bg-forest-panel rounded-2xl max-w-lg w-full p-6 border border-forest-line shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-forest-line pb-3">
+                <h3 class="text-sm font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-folder-open text-forest-amber"></i>
+                    <span>My Study Packs</span>
+                </h3>
+                <button onclick="closePacksModal()" class="text-forest-muted hover:text-forest-text text-sm" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-[11px] text-forest-muted">Saved automatically in this browser (latest 20).</p>
+            <div id="packList" class="space-y-3 max-h-[55vh] overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
     <script>
         let studyData = { flashcards: [], quiz: [] };
+        let cardStatus = [];            // 'new' | 'known' | 'again' per flashcard
         let currentCardIndex = 0;
         let isFlipped = false;
         let currentQuizIndex = 0;
         let score = 0;
 
+        const DEFAULT_MODEL = 'gemma-4-26b-a4b-it';
         const TAB_ACTIVE = "flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-forest-brand text-forest-on";
         const TAB_IDLE = "flex-1 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 text-forest-muted hover:text-forest-text hover:bg-forest-raised";
 
@@ -338,7 +428,102 @@
             return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
-        // File drop & PDF parsing
+        // ---------- Safe localStorage helpers ----------
+        function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+        function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+        function lsRemove(key) { try { localStorage.removeItem(key); } catch (e) {} }
+
+        // ---------- API key + model ----------
+        function getApiKey() {
+            const stored = (lsGet('fq_api_key') || '').trim();
+            if (stored) return stored;
+            const fromConfig = typeof CONFIG !== 'undefined' ? (CONFIG.GEMINI_API_KEY || '').trim() : '';
+            return fromConfig && fromConfig !== 'YOUR_ACTUAL_API_KEY_HERE' ? fromConfig : '';
+        }
+        function getModel() { return lsGet('fq_model') || DEFAULT_MODEL; }
+
+        function openSettingsModal(message) {
+            document.getElementById('apiKeyInput').value = lsGet('fq_api_key') || '';
+            document.getElementById('apiKeyInput').type = 'password';
+            document.getElementById('keyEye').className = 'fa-solid fa-eye';
+            document.getElementById('modelSelect').value = getModel();
+            const status = document.getElementById('settingsStatus');
+            if (message) status.textContent = message;
+            else if (!lsGet('fq_api_key') && getApiKey()) status.textContent = 'Currently using the key from config.js.';
+            else status.textContent = '';
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+        function toggleKeyVisibility() {
+            const input = document.getElementById('apiKeyInput');
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            document.getElementById('keyEye').className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        }
+        function saveSettings() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            const model = document.getElementById('modelSelect').value;
+            lsSet('fq_model', model);
+            if (key) lsSet('fq_api_key', key);
+            document.getElementById('settingsStatus').textContent = key ? 'Saved. You can generate now.' : 'Model saved. No key entered.';
+            if (key) setTimeout(closeSettingsModal, 700);
+        }
+        function clearSettings() {
+            lsRemove('fq_api_key');
+            document.getElementById('apiKeyInput').value = '';
+            document.getElementById('settingsStatus').textContent = 'Saved key removed from this browser.';
+        }
+
+        // ---------- Saved packs ----------
+        function loadPacks() {
+            try { return JSON.parse(lsGet('fq_packs') || '[]'); } catch (e) { return []; }
+        }
+        function savePack(notes, data) {
+            const firstLine = (notes.split('\n').map(l => l.trim()).find(l => l) || 'Untitled pack');
+            const title = firstLine.length > 48 ? firstLine.slice(0, 48) + '…' : firstLine;
+            const packs = loadPacks();
+            packs.unshift({ id: String(Date.now()), title, date: new Date().toLocaleString(), data });
+            lsSet('fq_packs', JSON.stringify(packs.slice(0, 20)));
+        }
+        function openPacksModal() { renderPacks(); document.getElementById('packsModal').classList.remove('hidden'); }
+        function closePacksModal() { document.getElementById('packsModal').classList.add('hidden'); }
+        function renderPacks() {
+            const list = document.getElementById('packList');
+            const packs = loadPacks();
+            if (!packs.length) {
+                list.innerHTML = '<p class="text-xs text-forest-muted text-center py-8">No saved packs yet. Generate one and it will show up here.</p>';
+                return;
+            }
+            list.innerHTML = packs.map(p => `
+                <div class="bg-forest-bg border border-forest-line rounded-xl p-4 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <h4 class="text-xs font-bold truncate">${escapeHtml(p.title)}</h4>
+                        <p class="text-[11px] text-forest-muted mt-0.5">${escapeHtml(p.date)} · ${p.data.flashcards.length} cards · ${p.data.quiz.length} questions</p>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button data-open="${p.id}" class="bg-forest-brand hover:bg-forest-mint text-forest-on px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Open</button>
+                        <button data-del="${p.id}" class="text-forest-muted hover:text-forest-rose px-2 py-1.5 transition" aria-label="Delete pack"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>`).join('');
+        }
+        document.getElementById('packList').addEventListener('click', (e) => {
+            const openBtn = e.target.closest('[data-open]');
+            const delBtn = e.target.closest('[data-del]');
+            if (openBtn) {
+                const pack = loadPacks().find(p => p.id === openBtn.dataset.open);
+                if (pack) {
+                    applyStudyData(pack.data);
+                    closePacksModal();
+                    document.getElementById('workspace').scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (delBtn) {
+                const packs = loadPacks().filter(p => p.id !== delBtn.dataset.del);
+                lsSet('fq_packs', JSON.stringify(packs));
+                renderPacks();
+            }
+        });
+
+        // ---------- File drop & PDF parsing ----------
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
 
@@ -384,7 +569,7 @@
             }
         }
 
-        // Tabs
+        // ---------- Tabs ----------
         function switchTab(tabName) {
             ['flashcards', 'quiz'].forEach(t => {
                 document.getElementById(`view-${t}`).classList.add('hidden');
@@ -394,30 +579,62 @@
             document.getElementById(`tab-${tabName}`).className = TAB_ACTIVE;
         }
 
-        // Flashcards
-        function updateFlashcardUI() {
-            if (!studyData.flashcards || studyData.flashcards.length === 0) {
-                document.getElementById('cardFrontText').innerText = "Please drop a PDF or paste notes to generate cards.";
-                document.getElementById('cardBackText').innerText = "Answers will appear here.";
-                document.getElementById('cardCounter').innerText = "No cards generated";
-                return;
+        // ---------- Flashcards ----------
+        function showCardFace(frontLabel, front, backLabel, back) {
+            const apply = () => {
+                document.getElementById('frontLabel').innerText = frontLabel;
+                document.getElementById('backLabel').innerText = backLabel;
+                document.getElementById('cardFrontText').innerText = front;
+                document.getElementById('cardBackText').innerText = back;
+            };
+            if (isFlipped) {
+                // flip back first so the next answer is never visible mid-rotation
+                isFlipped = false;
+                document.getElementById('cardInner').style.transform = 'rotateY(0deg)';
+                setTimeout(apply, 300);
+            } else {
+                apply();
             }
-            const card = studyData.flashcards[currentCardIndex];
-            document.getElementById('frontLabel').innerText = "Question";
-            document.getElementById('backLabel').innerText = "Answer";
-            document.getElementById('cardFrontText').innerText = card.front;
-            document.getElementById('cardBackText').innerText = card.back;
-            document.getElementById('cardCounter').innerText = `Card ${currentCardIndex + 1} of ${studyData.flashcards.length}`;
+        }
 
+        function updateFlashcardUI() {
+            const cards = studyData.flashcards || [];
+            const ratingRow = document.getElementById('ratingRow');
             const dotsContainer = document.getElementById('cardDots');
             dotsContainer.innerHTML = '';
-            studyData.flashcards.forEach((_, idx) => {
+
+            if (!cards.length) {
+                showCardFace('Awaiting Notes', 'Please drop a PDF or paste notes to generate cards.', 'Awaiting Notes', 'Answers will appear here.');
+                document.getElementById('cardCounter').innerText = 'No cards generated';
+                ratingRow.classList.add('hidden');
+                updateMastery();
+                return;
+            }
+
+            const card = cards[currentCardIndex];
+            showCardFace('Question', card.front, 'Answer', card.back);
+            document.getElementById('cardCounter').innerText = `Card ${currentCardIndex + 1} of ${cards.length}`;
+            ratingRow.classList.remove('hidden');
+
+            cards.forEach((_, idx) => {
                 const dot = document.createElement('div');
-                dot.className = `h-2 rounded-full transition-all ${idx === currentCardIndex ? 'bg-forest-brand w-5' : 'bg-forest-line w-2'}`;
+                const isCurrent = idx === currentCardIndex;
+                let color = 'bg-forest-line';
+                if (cardStatus[idx] === 'known') color = 'bg-forest-brand';
+                else if (cardStatus[idx] === 'again') color = 'bg-forest-amber';
+                else if (isCurrent) color = 'bg-forest-mint';
+                dot.className = `h-2 rounded-full transition-all ${isCurrent ? 'w-5' : 'w-2'} ${color}`;
                 dotsContainer.appendChild(dot);
             });
+            updateMastery();
+        }
 
-            if (isFlipped) flipCard();
+        function updateMastery() {
+            const total = (studyData.flashcards || []).length;
+            const known = cardStatus.filter(s => s === 'known').length;
+            document.getElementById('masteryBar').style.width = total ? `${(known / total) * 100}%` : '0%';
+            document.getElementById('masteryText').innerText = `Mastered ${known} of ${total}`;
+            document.getElementById('deckDoneBanner').classList.toggle('hidden', !(total > 0 && known === total));
         }
 
         function flipCard() {
@@ -434,7 +651,28 @@
             if (currentCardIndex > 0) { currentCardIndex--; updateFlashcardUI(); }
         }
 
-        // Quiz
+        function rateCard(status) {
+            const n = (studyData.flashcards || []).length;
+            if (!n) return;
+            cardStatus[currentCardIndex] = status;
+
+            // jump to the next card that isn't mastered yet (wraps around)
+            let next = -1;
+            for (let step = 1; step <= n; step++) {
+                const idx = (currentCardIndex + step) % n;
+                if (cardStatus[idx] !== 'known') { next = idx; break; }
+            }
+            if (next !== -1) currentCardIndex = next;
+            updateFlashcardUI();
+        }
+
+        function restartDeck() {
+            cardStatus = new Array((studyData.flashcards || []).length).fill('new');
+            currentCardIndex = 0;
+            updateFlashcardUI();
+        }
+
+        // ---------- Quiz ----------
         function initQuiz() {
             currentQuizIndex = 0;
             score = 0;
@@ -526,15 +764,105 @@
             initQuiz();
         }
 
-        // Gemma API call
-        async function generateStudyMaterial() {
-            const apiKey = typeof CONFIG !== 'undefined' ? CONFIG.GEMINI_API_KEY : '';
-            const notes = document.getElementById('notesInput').value.trim();
-            const numCards = document.getElementById('numCards').value;
-            const numQuiz = document.getElementById('numQuiz').value;
+        // ---------- Load a study pack into the UI ----------
+        function applyStudyData(data) {
+            studyData = data;
+            cardStatus = new Array(studyData.flashcards.length).fill('new');
+            currentCardIndex = 0;
+            updateFlashcardUI();
+            restartQuiz();
+            switchTab('flashcards');
+        }
 
-            if (!apiKey || apiKey === "YOUR_ACTUAL_API_KEY_HERE") {
-                alert("Please add your API key inside config.js (GEMINI_API_KEY).");
+        // ---------- AI generation ----------
+        function splitIntoChunks(text, size = 9000, maxChunks = 6) {
+            text = text.trim();
+            if (text.length <= size) return [text];
+            size = Math.max(size, Math.ceil(text.length / maxChunks));
+            const chunks = [];
+            let i = 0;
+            while (i < text.length) {
+                let end = Math.min(i + size, text.length);
+                if (end < text.length) {
+                    // try to cut at a paragraph / line / sentence boundary
+                    const slice = text.slice(i, end);
+                    const cut = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('\n'), slice.lastIndexOf('. '));
+                    if (cut > size * 0.6) end = i + cut + 1;
+                }
+                chunks.push(text.slice(i, end).trim());
+                i = end;
+            }
+            return chunks.filter(Boolean);
+        }
+
+        function buildPrompt(notes, numCards, numQuiz) {
+            return `Analyze these study notes and generate exactly ${numCards} flashcards (front and back) and ${numQuiz} multiple-choice quiz questions (with 4 options, correct answer index 0-3, and explanation).
+Return ONLY valid JSON matching this schema:
+{
+  "flashcards": [{"front": "...", "back": "..."}],
+  "quiz": [{"question": "...", "options": ["A", "B", "C", "D"], "answer": 0, "explanation": "..."}]
+}
+Notes: ${notes}`;
+        }
+
+        // Gemma models don't support responseMimeType (JSON mode), so JSON is requested in the prompt and parsed here.
+        async function callModel(prompt, apiKey, model) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            let response;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    break;
+                } catch (netErr) {
+                    console.warn(`Attempt ${attempt} failed:`, netErr);
+                    if (attempt === 3) throw new Error('Network connection to the Gemini API kept dropping. Try another network/browser, or switch to Gemini 2.5 Flash in API Key settings.');
+                    await new Promise(r => setTimeout(r, 1500 * attempt));
+                }
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`API ${response.status}: ${data.error?.message || 'Unknown API error'}`);
+            }
+
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const textOutput = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+            if (!textOutput) throw new Error('The model returned an empty response.');
+
+            const start = textOutput.indexOf('{');
+            const end = textOutput.lastIndexOf('}');
+            if (start === -1 || end === -1) throw new Error('Response did not contain JSON: ' + textOutput.slice(0, 200));
+            return JSON.parse(textOutput.slice(start, end + 1));
+        }
+
+        function sanitizeStudyData(d) {
+            const flashcards = (d.flashcards || [])
+                .filter(c => c && c.front && c.back)
+                .map(c => ({ front: String(c.front), back: String(c.back) }));
+            const quiz = (d.quiz || [])
+                .filter(q => q && q.question && Array.isArray(q.options) && q.options.length >= 2)
+                .map(q => ({
+                    question: String(q.question),
+                    options: q.options.map(String),
+                    answer: Number(q.answer),
+                    explanation: String(q.explanation || '')
+                }))
+                .filter(q => Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length);
+            return { flashcards, quiz };
+        }
+
+        async function generateStudyMaterial() {
+            const apiKey = getApiKey();
+            const notes = document.getElementById('notesInput').value.trim();
+            const numCards = Math.min(15, Math.max(2, parseInt(document.getElementById('numCards').value) || 6));
+            const numQuiz = Math.min(15, Math.max(2, parseInt(document.getElementById('numQuiz').value) || 5));
+
+            if (!apiKey) {
+                openSettingsModal('Add your Gemini API key to start generating.');
                 return;
             }
             if (!notes) {
@@ -542,66 +870,63 @@
                 return;
             }
 
+            const model = getModel();
+            const chunks = splitIntoChunks(notes);
+            const cardsPer = chunks.length === 1 ? numCards : Math.max(1, Math.ceil(numCards / chunks.length));
+            const quizPer = chunks.length === 1 ? numQuiz : Math.max(1, Math.ceil(numQuiz / chunks.length));
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
             document.getElementById('loadingState').classList.remove('hidden');
 
-            const prompt = `Analyze these study notes and generate exactly ${numCards} flashcards (front and back) and ${numQuiz} multiple-choice quiz questions (with 4 options, correct answer index 0-3, and explanation).
-            Return ONLY valid JSON matching this schema:
-            {
-              "flashcards": [{"front": "...", "back": "..."}],
-              "quiz": [{"question": "...", "options": ["A", "B", "C", "D"], "answer": 0, "explanation": "..."}]
-            }
-            Notes: ${notes}`;
-
             try {
-                // Gemma models don't support responseMimeType, so JSON is requested in the prompt and parsed below.
-                const MODEL = 'gemma-4-26b-a4b-it'; // swap to 'gemini-2.5-flash' to test your key/network
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
-                let response;
-                for (let attempt = 1; attempt <= 3; attempt++) {
+                const merged = { flashcards: [], quiz: [] };
+                let lastError = null;
+
+                for (let i = 0; i < chunks.length; i++) {
+                    document.getElementById('loadingTitle').innerText = chunks.length > 1
+                        ? `Synthesizing part ${i + 1} of ${chunks.length}...`
+                        : 'Synthesizing Notes...';
+                    document.getElementById('loadingSub').innerText = chunks.length > 1
+                        ? 'Long notes are processed in sections so nothing gets cut off'
+                        : 'Extracting definitions, formulas, and assessment questions';
                     try {
-                        response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                        });
-                        break;
-                    } catch (netErr) {
-                        console.warn(`Attempt ${attempt} failed:`, netErr);
-                        if (attempt === 3) throw new Error('Network connection to the Gemini API kept dropping. Try another network/browser, or a faster model.');
-                        await new Promise(r => setTimeout(r, 1500 * attempt));
+                        const part = sanitizeStudyData(await callModel(buildPrompt(chunks[i], cardsPer, quizPer), apiKey, model));
+                        merged.flashcards.push(...part.flashcards);
+                        merged.quiz.push(...part.quiz);
+                    } catch (err) {
+                        console.error(`Section ${i + 1} failed:`, err);
+                        lastError = err;
                     }
                 }
 
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(`API ${response.status}: ${data.error?.message || 'Unknown API error'}`);
+                if (!merged.flashcards.length && !merged.quiz.length) {
+                    throw lastError || new Error('No usable cards or questions came back. Try again.');
                 }
 
-                const parts = data.candidates?.[0]?.content?.parts || [];
-                const textOutput = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-                if (!textOutput) throw new Error('The model returned an empty response.');
+                // drop duplicate cards, then trim to the requested totals
+                const seen = new Set();
+                merged.flashcards = merged.flashcards.filter(c => {
+                    const k = c.front.trim().toLowerCase();
+                    if (seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                }).slice(0, numCards);
+                merged.quiz = merged.quiz.slice(0, numQuiz);
 
-                const start = textOutput.indexOf('{');
-                const end = textOutput.lastIndexOf('}');
-                if (start === -1 || end === -1) throw new Error('Response did not contain JSON: ' + textOutput.slice(0, 200));
-                studyData = JSON.parse(textOutput.slice(start, end + 1));
-
-                currentCardIndex = 0;
-                isFlipped = false;
-                document.getElementById('cardInner').style.transform = 'rotateY(0deg)';
-                updateFlashcardUI();
-                restartQuiz();
-                switchTab('flashcards');
+                applyStudyData(merged);
+                savePack(notes, merged);
             } catch (err) {
                 console.error(err);
                 alert("Generation error: " + err.message);
             } finally {
+                btn.disabled = false;
                 document.getElementById('loadingState').classList.add('hidden');
             }
         }
 
-        // Modals
-        ['aboutModal', 'exportModal'].forEach(id => {
+        // ---------- Modals ----------
+        ['aboutModal', 'exportModal', 'settingsModal', 'packsModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.id === id) document.getElementById(id).classList.add('hidden');
             });
@@ -611,6 +936,7 @@
         function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
         function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
 
+        // ---------- Exports ----------
         function exportAnkiCSV() {
             if (!studyData.flashcards.length) { alert("No flashcards to export yet!"); return; }
             let csv = "Front,Back\n";
@@ -635,11 +961,14 @@
             closeExportModal();
         }
 
-        // Keyboard: Esc closes modals; Space/arrows only work when not typing in a field
+        // ---------- Keyboard ----------
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeAboutModal(); closeExportModal(); return; }
+            if (e.key === 'Escape') {
+                closeAboutModal(); closeExportModal(); closeSettingsModal(); closePacksModal();
+                return;
+            }
             const tag = (e.target.tagName || '').toLowerCase();
-            if (tag === 'input' || tag === 'textarea') return;
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
             if (e.code === 'Space' && studyData.flashcards.length) { e.preventDefault(); flipCard(); }
             if (e.code === 'ArrowRight') nextCard();
             if (e.code === 'ArrowLeft') prevCard();
