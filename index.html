@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F&Q: Flashcard & Quiz Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: {
+                            bg: '#0E1512',
+                            panel: '#15211C',
+                            raised: '#1B2B24',
+                            line: '#24382F',
+                            text: '#E6F2EA',
+                            muted: '#8DAA99',
+                            brand: '#4FB286',
+                            mint: '#9BD6B5',
+                            amber: '#F2B84B',
+                            rose: '#E5736B',
+                            on: '#07120D'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- PDF.js for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
+    <!-- API key lives in a local, gitignored config.js -->
+    <script src="config.js" onerror="console.warn('config.js not found.')"></script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #0E1512;
+            background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79, 178, 134, 0.12), transparent);
+            background-repeat: no-repeat;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .input-field {
+            background: #0E1512;
+            border: 1px solid #24382F;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-field:focus-within, .input-field:focus {
+            border-color: #4FB286;
+            box-shadow: 0 0 0 3px rgba(79, 178, 134, 0.15);
+        }
+
+        /* 3D flashcard flip */
+        .perspective-1000 { perspective: 1200px; }
+        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0E1512; }
+        ::-webkit-scrollbar-thumb { background: #24382F; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4FB286; }
+    </style>
+</head>
+
+<body class="text-forest-text min-h-screen flex flex-col selection:bg-forest-brand selection:text-forest-on">
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-40 bg-forest-bg/85 backdrop-blur-md border-b border-forest-line px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <h1 class="font-extrabold text-lg tracking-tight flex items-center space-x-2">
+                <span class="text-forest-brand">F&Q</span>
+                <span>Generator</span>
+            </h1>
+            <button onclick="openAboutModal()" class="text-xs font-medium text-forest-muted hover:text-forest-text bg-forest-panel hover:bg-forest-raised px-3 py-1.5 rounded-lg border border-forest-line transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-info text-forest-brand"></i>
+                <span>About Project</span>
+            </button>
+        </div>
+
+        <button onclick="openExportModal()" class="bg-forest-panel hover:bg-forest-raised text-forest-muted hover:text-forest-text px-3.5 py-2 rounded-xl text-xs font-medium border border-forest-line transition flex items-center space-x-2">
+            <i class="fa-solid fa-download text-forest-brand"></i>
+            <span class="hidden sm:inline">Export Study Pack</span>
+        </button>
+    </header>
+
+    <!-- Hero (full screen: notes section only appears after scrolling) -->
+    <section id="hero" class="relative max-w-7xl w-full mx-auto px-6 min-h-[calc(100vh-73px)] flex flex-col items-center justify-center text-center">
+        <div class="bg-forest-panel rounded-3xl p-10 md:p-14 border border-forest-line max-w-4xl mx-auto space-y-5">
+            <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                Transform Any Study Notes Into Interactive <span class="text-forest-brand">Flashcards</span> & <span class="text-forest-amber">Quizzes</span>
+            </h2>
+            <p class="text-sm md:text-base text-forest-muted max-w-2xl mx-auto leading-relaxed">
+                Scroll down, drop your lecture notes or PDF below, and let Gemma 4 synthesize active recall cards and practice tests for you instantly.
+            </p>
+        </div>
+        <button onclick="document.getElementById('workspace').scrollIntoView({behavior:'smooth'})" class="mt-10 text-forest-muted hover:text-forest-brand transition animate-bounce" aria-label="Scroll down">
+            <i class="fa-solid fa-chevron-down text-xl"></i>
+        </button>
+    </section>
+
+    <!-- Workspace -->
+    <main id="workspace" class="relative flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 pt-24 pb-24 scroll-mt-16">
+
+        <!-- Left: notes input -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="bg-forest-panel rounded-2xl p-5 border border-forest-line space-y-5">
+                <div class="flex items-center justify-between border-b border-forest-line pb-3">
+                    <h2 class="font-bold text-xs uppercase tracking-wider text-forest-muted flex items-center space-x-2">
+                        <i class="fa-solid fa-pen-nib text-forest-brand"></i>
+                        <span>Enter Your Notes</span>
+                    </h2>
+                    <span id="fileBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-forest-brand/15 text-forest-mint border border-forest-brand/30">PDF Parsed</span>
+                </div>
+
+                <div id="dropzone" class="border-2 border-dashed border-forest-line hover:border-forest-brand rounded-xl p-6 text-center cursor-pointer transition-all bg-forest-bg hover:bg-forest-brand/5 group">
+                    <input type="file" id="fileInput" accept=".pdf,.txt" class="hidden" onchange="handleFileSelect(event)">
+                    <div class="w-12 h-12 mx-auto rounded-full bg-forest-brand/15 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
+                        <i class="fa-solid fa-cloud-arrow-up text-xl text-forest-brand"></i>
+                    </div>
+                    <p class="text-sm font-semibold">Drop PDF or text notes</p>
+                    <p class="text-xs text-forest-muted mt-1">Automatic browser extraction via PDF.js</p>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-forest-muted flex justify-between">
+                        <span>Or Paste Notes Directly</span>
+                        <span id="charCounter" class="text-[10px] font-mono">0 chars</span>
+                    </label>
+                    <textarea id="notesInput" rows="6" placeholder="Paste chapter summaries, lecture notes, or key concepts..."
+                        class="w-full input-field rounded-xl p-3 text-xs placeholder-forest-muted/60 focus:outline-none resize-none"
+                        oninput="document.getElementById('charCounter').innerText = this.value.length + ' chars'"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <div class="input-field p-3 rounded-xl">
+                        <label class="block text-[11px] font-semibold text-forest-muted mb-1">Flashcards</label>
+                        <input type="number" id="numCards" value="6" min="2" max="15" class="bg-transparent w-full text-sm font-mono font-bold text-forest-brand focus:outline-none">
+                    </div>
+                    <div class="input-field p-3 rounded-xl">
+                        <label class="block text-[11px] font-semibold text-forest-muted mb-1">Quiz Items</label>
+                        <input type="number" id="numQuiz" value="5" min="2" max="15" class="bg-transparent w-full text-sm font-mono font-bold text-forest-amber focus:outline-none">
+                    </div>
+                </div>
+
+                <button onclick="generateStudyMaterial()" id="generateBtn" class="w-full bg-forest-brand hover:bg-forest-mint text-forest-on font-bold py-3.5 rounded-xl transition-colors">
+                    Create a Study Pack
+                </button>
+            </div>
+        </div>
+
+        <!-- Right: study views -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <div class="bg-forest-panel rounded-2xl p-1.5 flex space-x-1 border border-forest-line">
+                <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-forest-brand text-forest-on">
+                    <i class="fa-solid fa-clone text-sm"></i>
+                    <span>Interactive Flashcards</span>
+                </button>
+                <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 text-forest-muted hover:text-forest-text hover:bg-forest-raised">
+                    <i class="fa-solid fa-list-check text-sm"></i>
+                    <span>Practice Quiz</span>
+                </button>
+            </div>
+
+            <div id="loadingState" class="hidden bg-forest-panel rounded-2xl p-16 text-center space-y-4 border border-forest-line">
+                <div class="relative w-16 h-16 mx-auto">
+                    <div class="absolute inset-0 rounded-full border-4 border-forest-brand/20"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-forest-brand border-t-transparent animate-spin"></div>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold tracking-wide">Synthesizing Notes...</h3>
+                    <p class="text-xs text-forest-muted mt-1">Extracting definitions, formulas, and assessment questions</p>
+                </div>
+            </div>
+
+            <!-- Flashcards -->
+            <div id="view-flashcards" class="space-y-4">
+                <div class="bg-forest-panel rounded-2xl p-8 min-h-[420px] flex flex-col justify-between border border-forest-line relative overflow-hidden">
+
+                    <div class="flex items-center justify-between text-xs font-mono text-forest-muted border-b border-forest-line pb-4">
+                        <span id="cardCounter" class="text-forest-text font-bold">No cards generated</span>
+                        <span class="text-[11px]">Click card or press Space to flip</span>
+                    </div>
+
+                    <div class="perspective-1000 my-6 cursor-pointer select-none" onclick="flipCard()">
+                        <div id="cardInner" class="relative w-full h-[220px] transform-style-3d">
+                            <div class="absolute inset-0 rounded-2xl border border-forest-line p-8 flex flex-col items-center justify-center text-center backface-hidden bg-forest-raised">
+                                <span id="frontLabel" class="text-[10px] font-mono uppercase tracking-widest text-forest-brand mb-3 bg-forest-brand/10 px-3 py-1 rounded-full border border-forest-brand/20">Awaiting Notes</span>
+                                <p id="cardFrontText" class="text-base font-bold text-forest-text leading-relaxed max-w-xl">Drop a PDF or paste notes on the left and click "Create a Study Pack" to generate flashcards.</p>
+                            </div>
+
+                            <div class="absolute inset-0 rounded-2xl border border-forest-brand/40 p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 bg-forest-bg">
+                                <span id="backLabel" class="text-[10px] font-mono uppercase tracking-widest text-forest-amber mb-3 bg-forest-amber/10 px-3 py-1 rounded-full border border-forest-amber/20">Awaiting Notes</span>
+                                <p id="cardBackText" class="text-base font-medium text-forest-mint leading-relaxed max-w-xl">Answers will appear here once synthesized.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-forest-line pt-4">
+                        <button onclick="prevCard()" class="bg-forest-raised hover:bg-forest-line px-5 py-2.5 rounded-xl text-xs font-semibold text-forest-text transition flex items-center space-x-2">
+                            <i class="fa-solid fa-chevron-left"></i>
+                            <span>Previous</span>
+                        </button>
+
+                        <div class="flex items-center space-x-1.5" id="cardDots"></div>
+
+                        <button onclick="nextCard()" class="bg-forest-raised hover:bg-forest-line px-5 py-2.5 rounded-xl text-xs font-semibold text-forest-text transition flex items-center space-x-2">
+                            <span>Next</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz -->
+            <div id="view-quiz" class="hidden space-y-4">
+                <div id="quizContainer" class="bg-forest-panel rounded-2xl p-8 border border-forest-line space-y-6">
+                    <div class="flex items-center justify-between border-b border-forest-line pb-4">
+                        <span id="quizCounter" class="text-xs font-mono font-bold text-forest-muted">No quiz generated</span>
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-trophy text-forest-amber text-xs"></i>
+                            <span id="quizScore" class="text-xs font-bold text-forest-amber font-mono">Score: 0</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 id="quizQuestionText" class="text-base font-bold mb-5 leading-snug">Please enter your notes and click "Create a Study Pack" to generate practice questions.</h3>
+                        <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3"></div>
+                    </div>
+
+                    <div id="quizExplanation" class="hidden border border-forest-brand/30 rounded-xl p-4 text-xs text-forest-text leading-relaxed bg-forest-brand/10"></div>
+
+                    <div class="flex justify-end pt-2">
+                        <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden bg-forest-brand hover:bg-forest-mint text-forest-on text-xs font-bold px-6 py-2.5 rounded-xl transition-colors">
+                            Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ABOUT MODAL -->
+    <div id="aboutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div class="bg-forest-panel rounded-2xl max-w-lg w-full p-6 border border-forest-line shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-forest-line pb-3">
+                <h3 class="text-sm font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-laptop-code text-forest-brand"></i>
+                    <span>About F&Q Generator</span>
+                </h3>
+                <button onclick="closeAboutModal()" class="text-forest-muted hover:text-forest-text text-sm" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="space-y-4 text-xs text-forest-text leading-relaxed">
+                <p>
+                    <strong>F&Q Generator</strong> is an AI-powered study tool built for <strong>Hacktoberfest 2026</strong> as part of the <strong>Infinity AI Forge Hackathon</strong>. It addresses <em>Challenge 06: AI Study Flashcard & Quiz Generator</em>.
+                </p>
+
+                <div class="bg-forest-bg p-4 rounded-xl border border-forest-line space-y-2">
+                    <h4 class="font-bold text-forest-brand">Core Features:</h4>
+                    <ul class="list-disc list-inside space-y-1.5 text-forest-muted">
+                        <li>Instant PDF & text note parsing via PDF.js.</li>
+                        <li>Gemma 4 model integration (<code class="text-forest-mint">gemma-4-26b-a4b-it</code>).</li>
+                        <li>3D interactive flashcards and practice quizzes.</li>
+                        <li>Anki CSV & structured JSON schema exports.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPORT MODAL -->
+    <div id="exportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div class="bg-forest-panel rounded-2xl max-w-md w-full p-6 border border-forest-line shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-forest-line pb-3">
+                <h3 class="text-sm font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-file-export text-forest-brand"></i>
+                    <span>Export Study Package</span>
+                </h3>
+                <button onclick="closeExportModal()" class="text-forest-muted hover:text-forest-text text-sm" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <p class="text-xs text-forest-muted leading-relaxed">
+                Export your synthesized study pack into standard formats for external review or Anki spaced-repetition deck importing.
+            </p>
+
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="exportAnkiCSV()" class="bg-forest-bg hover:bg-forest-raised border border-forest-line p-4 rounded-xl text-left transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-forest-brand/15 text-forest-brand flex items-center justify-center font-bold text-sm">CSV</div>
+                        <div>
+                            <h4 class="text-xs font-bold group-hover:text-forest-mint transition">Anki Flashcard Deck</h4>
+                            <p class="text-[11px] text-forest-muted">Formatted CSV ready for Anki deck import</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-xs text-forest-muted group-hover:text-forest-text"></i>
+                </button>
+
+                <button onclick="exportJSON()" class="bg-forest-bg hover:bg-forest-raised border border-forest-line p-4 rounded-xl text-left transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-forest-amber/15 text-forest-amber flex items-center justify-center font-bold text-sm">JSON</div>
+                        <div>
+                            <h4 class="text-xs font-bold group-hover:text-forest-amber transition">Structured JSON Schema</h4>
+                            <p class="text-[11px] text-forest-muted">Full predictable study pack object schema</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-xs text-forest-muted group-hover:text-forest-text"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let studyData = { flashcards: [], quiz: [] };
+        let currentCardIndex = 0;
+        let isFlipped = false;
+        let currentQuizIndex = 0;
+        let score = 0;
+
+        const TAB_ACTIVE = "flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-forest-brand text-forest-on";
+        const TAB_IDLE = "flex-1 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 text-forest-muted hover:text-forest-text hover:bg-forest-raised";
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        // File drop & PDF parsing
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-forest-brand'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-forest-brand'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-forest-brand');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect({ target: fileInput });
+            }
+        });
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    document.getElementById('notesInput').value = fullText;
+                    document.getElementById('charCounter').innerText = fullText.length + ' chars';
+                    document.getElementById('fileBadge').classList.remove('hidden');
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.type === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('notesInput').value = e.target.result;
+                    document.getElementById('charCounter').innerText = e.target.result.length + ' chars';
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Tabs
+        function switchTab(tabName) {
+            ['flashcards', 'quiz'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = TAB_IDLE;
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).className = TAB_ACTIVE;
+        }
+
+        // Flashcards
+        function updateFlashcardUI() {
+            if (!studyData.flashcards || studyData.flashcards.length === 0) {
+                document.getElementById('cardFrontText').innerText = "Please drop a PDF or paste notes to generate cards.";
+                document.getElementById('cardBackText').innerText = "Answers will appear here.";
+                document.getElementById('cardCounter').innerText = "No cards generated";
+                return;
+            }
+            const card = studyData.flashcards[currentCardIndex];
+            document.getElementById('frontLabel').innerText = "Question";
+            document.getElementById('backLabel').innerText = "Answer";
+            document.getElementById('cardFrontText').innerText = card.front;
+            document.getElementById('cardBackText').innerText = card.back;
+            document.getElementById('cardCounter').innerText = `Card ${currentCardIndex + 1} of ${studyData.flashcards.length}`;
+
+            const dotsContainer = document.getElementById('cardDots');
+            dotsContainer.innerHTML = '';
+            studyData.flashcards.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = `h-2 rounded-full transition-all ${idx === currentCardIndex ? 'bg-forest-brand w-5' : 'bg-forest-line w-2'}`;
+                dotsContainer.appendChild(dot);
+            });
+
+            if (isFlipped) flipCard();
+        }
+
+        function flipCard() {
+            if (!studyData.flashcards || studyData.flashcards.length === 0) return;
+            isFlipped = !isFlipped;
+            document.getElementById('cardInner').style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+        }
+
+        function nextCard() {
+            if (currentCardIndex < studyData.flashcards.length - 1) { currentCardIndex++; updateFlashcardUI(); }
+        }
+
+        function prevCard() {
+            if (currentCardIndex > 0) { currentCardIndex--; updateFlashcardUI(); }
+        }
+
+        // Quiz
+        function initQuiz() {
+            currentQuizIndex = 0;
+            score = 0;
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            if (!studyData.quiz || studyData.quiz.length === 0) {
+                document.getElementById('quizCounter').innerText = "No quiz generated";
+                document.getElementById('quizQuestionText').innerText = "Please enter your notes and click \"Create a Study Pack\" to generate practice questions.";
+                document.getElementById('quizOptionsContainer').innerHTML = "";
+                return;
+            }
+            const q = studyData.quiz[currentQuizIndex];
+            document.getElementById('quizCounter').innerText = `Question ${currentQuizIndex + 1} of ${studyData.quiz.length}`;
+            document.getElementById('quizScore').innerText = `Score: ${score}`;
+            document.getElementById('quizQuestionText').innerText = q.question;
+            document.getElementById('quizExplanation').classList.add('hidden');
+            document.getElementById('nextQuizBtn').classList.add('hidden');
+
+            const optionsBox = document.getElementById('quizOptionsContainer');
+            optionsBox.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left bg-forest-bg hover:bg-forest-raised p-4 rounded-xl text-xs font-semibold transition text-forest-text border border-forest-line flex items-center justify-between";
+                btn.innerHTML = `<span>${escapeHtml(opt)}</span> <i class="fa-regular fa-circle text-forest-muted"></i>`;
+                btn.onclick = () => selectQuizOption(idx, q.answer, q.explanation);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        function selectQuizOption(selectedIdx, correctIdx, explanation) {
+            const options = document.getElementById('quizOptionsContainer').children;
+            for (let i = 0; i < options.length; i++) {
+                options[i].disabled = true;
+                if (i === correctIdx) {
+                    options[i].className = "w-full text-left p-4 rounded-xl text-xs font-semibold bg-forest-brand/15 border border-forest-brand text-forest-mint flex items-center justify-between";
+                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-check text-forest-brand"></i>`;
+                } else if (i === selectedIdx) {
+                    options[i].className = "w-full text-left p-4 rounded-xl text-xs font-semibold bg-forest-rose/10 border border-forest-rose text-forest-rose flex items-center justify-between";
+                    options[i].innerHTML = options[i].querySelector('span').outerHTML + `<i class="fa-solid fa-circle-xmark text-forest-rose"></i>`;
+                }
+            }
+            if (selectedIdx === correctIdx) score++;
+            document.getElementById('quizScore').innerText = `Score: ${score}`;
+
+            const expDiv = document.getElementById('quizExplanation');
+            expDiv.innerHTML = `<strong>Explanation:</strong> ${escapeHtml(explanation)}`;
+            expDiv.classList.remove('hidden');
+            document.getElementById('nextQuizBtn').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            if (currentQuizIndex < studyData.quiz.length - 1) {
+                currentQuizIndex++;
+                renderQuizQuestion();
+            } else {
+                document.getElementById('quizContainer').innerHTML = `
+                    <div class="text-center py-12 space-y-4">
+                        <i class="fa-solid fa-award text-5xl text-forest-amber animate-bounce"></i>
+                        <h3 class="text-xl font-bold">Quiz Completed!</h3>
+                        <p class="text-xs text-forest-muted">Your final score is ${score} out of ${studyData.quiz.length}</p>
+                        <button onclick="restartQuiz()" class="bg-forest-brand hover:bg-forest-mint text-forest-on px-6 py-2.5 rounded-xl text-xs font-bold transition-colors">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        function restartQuiz() {
+            // Restore the quiz layout, then start over
+            document.getElementById('quizContainer').innerHTML = `
+                <div class="flex items-center justify-between border-b border-forest-line pb-4">
+                    <span id="quizCounter" class="text-xs font-mono font-bold text-forest-muted"></span>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-trophy text-forest-amber text-xs"></i>
+                        <span id="quizScore" class="text-xs font-bold text-forest-amber font-mono">Score: 0</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 id="quizQuestionText" class="text-base font-bold mb-5 leading-snug"></h3>
+                    <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3"></div>
+                </div>
+                <div id="quizExplanation" class="hidden border border-forest-brand/30 rounded-xl p-4 text-xs text-forest-text leading-relaxed bg-forest-brand/10"></div>
+                <div class="flex justify-end pt-2">
+                    <button onclick="nextQuizQuestion()" id="nextQuizBtn" class="hidden bg-forest-brand hover:bg-forest-mint text-forest-on text-xs font-bold px-6 py-2.5 rounded-xl transition-colors">
+                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                    </button>
+                </div>`;
+            initQuiz();
+        }
+
+        // Gemma API call
+        async function generateStudyMaterial() {
+            const apiKey = typeof CONFIG !== 'undefined' ? CONFIG.GEMINI_API_KEY : '';
+            const notes = document.getElementById('notesInput').value.trim();
+            const numCards = document.getElementById('numCards').value;
+            const numQuiz = document.getElementById('numQuiz').value;
+
+            if (!apiKey || apiKey === "YOUR_ACTUAL_API_KEY_HERE") {
+                alert("Please add your API key inside config.js (GEMINI_API_KEY).");
+                return;
+            }
+            if (!notes) {
+                alert("Please paste study notes or upload a PDF document first.");
+                return;
+            }
+
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            const prompt = `Analyze these study notes and generate exactly ${numCards} flashcards (front and back) and ${numQuiz} multiple-choice quiz questions (with 4 options, correct answer index 0-3, and explanation).
+            Return ONLY valid JSON matching this schema:
+            {
+              "flashcards": [{"front": "...", "back": "..."}],
+              "quiz": [{"question": "...", "options": ["A", "B", "C", "D"], "answer": 0, "explanation": "..."}]
+            }
+            Notes: ${notes}`;
+
+            try {
+                // Gemma models don't support responseMimeType, so JSON is requested in the prompt and parsed below.
+                const MODEL = 'gemma-4-26b-a4b-it'; // swap to 'gemini-2.5-flash' to test your key/network
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+                let response;
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        break;
+                    } catch (netErr) {
+                        console.warn(`Attempt ${attempt} failed:`, netErr);
+                        if (attempt === 3) throw new Error('Network connection to the Gemini API kept dropping. Try another network/browser, or a faster model.');
+                        await new Promise(r => setTimeout(r, 1500 * attempt));
+                    }
+                }
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(`API ${response.status}: ${data.error?.message || 'Unknown API error'}`);
+                }
+
+                const parts = data.candidates?.[0]?.content?.parts || [];
+                const textOutput = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+                if (!textOutput) throw new Error('The model returned an empty response.');
+
+                const start = textOutput.indexOf('{');
+                const end = textOutput.lastIndexOf('}');
+                if (start === -1 || end === -1) throw new Error('Response did not contain JSON: ' + textOutput.slice(0, 200));
+                studyData = JSON.parse(textOutput.slice(start, end + 1));
+
+                currentCardIndex = 0;
+                isFlipped = false;
+                document.getElementById('cardInner').style.transform = 'rotateY(0deg)';
+                updateFlashcardUI();
+                restartQuiz();
+                switchTab('flashcards');
+            } catch (err) {
+                console.error(err);
+                alert("Generation error: " + err.message);
+            } finally {
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+        }
+
+        // Modals
+        ['aboutModal', 'exportModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target.id === id) document.getElementById(id).classList.add('hidden');
+            });
+        });
+        function openAboutModal() { document.getElementById('aboutModal').classList.remove('hidden'); }
+        function closeAboutModal() { document.getElementById('aboutModal').classList.add('hidden'); }
+        function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
+        function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+        function exportAnkiCSV() {
+            if (!studyData.flashcards.length) { alert("No flashcards to export yet!"); return; }
+            let csv = "Front,Back\n";
+            studyData.flashcards.forEach(c => {
+                csv += `"${c.front.replace(/"/g, '""')}","${c.back.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = 'study_pack_anki.csv';
+            a.click();
+            closeExportModal();
+        }
+
+        function exportJSON() {
+            if (!studyData.flashcards.length) { alert("No study pack to export yet!"); return; }
+            const blob = new Blob([JSON.stringify(studyData, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = 'study_pack_schema.json';
+            a.click();
+            closeExportModal();
+        }
+
+        // Keyboard: Esc closes modals; Space/arrows only work when not typing in a field
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { closeAboutModal(); closeExportModal(); return; }
+            const tag = (e.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            if (e.code === 'Space' && studyData.flashcards.length) { e.preventDefault(); flipCard(); }
+            if (e.code === 'ArrowRight') nextCard();
+            if (e.code === 'ArrowLeft') prevCard();
+        });
+
+        window.onload = () => {
+            updateFlashcardUI();
+            renderQuizQuestion();
+        };
+    </script>
+</body>
+</html>
